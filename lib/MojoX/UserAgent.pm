@@ -36,28 +36,27 @@ sub spool_tx {
 
 sub run_all {
     my $self = shift;
-    my @transactions = @{$self->{_txs}};
 
-    print "Transactions: " . @transactions . "\n";
     while (1) {
-        $self->{_client}->spin(@transactions);
-        my @buffer;
-        while (my $tx = shift @transactions) {
-            if ($tx->is_finished) {
-                # Callback
-                print $tx->req->url . " done!\n";
-            } else {
-                push @buffer, $tx;
-            }
-        }
-        push @transactions, @buffer;
-        last unless @transactions;
+        last unless $self->crank;
     }
 }
 
 sub crank {
     my $self = shift;
-
+    my @transactions = @{$self->{_txs}};
+    $self->{_client}->spin(@transactions);
+    my @buffer;
+    while (my $tx = shift @transactions) {
+        if ($tx->is_finished) {
+            # Callback
+            print $tx->req->url . " done!\n";
+        } else {
+            push @buffer, $tx;
+        }
+    }
+    push @transactions, @buffer;
+    return scalar @transactions;
 }
 
 sub handler {
