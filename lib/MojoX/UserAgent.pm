@@ -18,6 +18,8 @@ __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('_client', default => sub { Mojo::Client->new });
 # __PACKAGE__->attr('_handler', default => undefined);
 
+our $VERSION = '0.001';
+
 sub new {
     my $self = shift->SUPER::new();
 
@@ -51,3 +53,4 @@ sub register_callback {
 }
 
 1;
+__END__
