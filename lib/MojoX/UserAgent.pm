@@ -16,7 +16,7 @@ use Mojo::Cookie;
 
 __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('_client', default => sub { Mojo::Client->new });
-__PACKAGE__->attr('_handler', default => undefined);
+# __PACKAGE__->attr('_handler', default => undefined);
 
 sub new {
     my $self = shift->SUPER::new();
@@ -41,11 +41,13 @@ sub crank {
 
 sub handler {
     my $self = shift;
-    Carp::croak('No callback registered') unless _handler;
-    self->handler;
+    # Carp::croak('No callback registered') unless _handler;
+    # $self->_handler;
 }
 
 sub register_callback {
     my $self = shift;
 
 }
+
+1;
