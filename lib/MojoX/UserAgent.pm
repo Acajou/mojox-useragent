@@ -15,25 +15,44 @@ use Mojo::Client;
 use Mojo::Cookie;
 
 __PACKAGE__->attr('redirect_limit', default => 10);
-__PACKAGE__->attr('_client', default => sub { Mojo::Client->new });
+# __PACKAGE__->attr('_client', default => sub { Mojo::Client->new });
 # __PACKAGE__->attr('_handler', default => undefined);
 
 our $VERSION = '0.001';
 
 sub new {
     my $self = shift->SUPER::new();
-
+    $self->{_client} = Mojo::Client->new;
+    return $self;
 }
 
-sub spool {
+sub spool_tx {
     my $self = shift;
-
+    my $new_transactions = [@_];
+    for my $tx (@{$new_transactions}) {
+        push @{$self->{_txs}}, $tx;
+    }
 }
 
-sub run {
+sub run_all {
     my $self = shift;
+    my @transactions = @{$self->{_txs}};
 
-
+    print "Transactions: " . @transactions . "\n";
+    while (1) {
+        $self->{_client}->spin(@transactions);
+        my @buffer;
+        while (my $tx = shift @transactions) {
+            if ($tx->is_finished) {
+                # Callback
+                print $tx->req->url . " done!\n";
+            } else {
+                push @buffer, $tx;
+            }
+        }
+        push @transactions, @buffer;
+        last unless @transactions;
+    }
 }
 
 sub crank {
