@@ -29,6 +29,8 @@ sub spool_tx {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
+        $tx->{_hops} = 0 unless $tx->{_hops};
+        $tx->{_original_url} = $tx->req->url unless $tx->{_original_url};
         push @{$self->{_txs}}, $tx;
     }
 }
@@ -49,7 +51,7 @@ sub crank {
     while (my $tx = shift @{$transactions}) {
         if ($tx->is_finished) {
             if ($tx->res->is_status_class(300)
-                && (!$tx->{_hops} || $tx->{_hops} < $self->redirect_limit)
+                && $tx->{_hops} < $self->redirect_limit
                 && (my $location = $tx->res->headers->header('Location')))
             {
 
@@ -58,7 +60,8 @@ sub crank {
 
                 unless ($tx->res->code == 305) {
                     my $new_tx = Mojo::Transaction->new_get($location);
-                    $new_tx->{_hops} = $tx->{_hops} ? $tx->{_hops}+1 : 1;
+                    $new_tx->{_hops} = $tx->{_hops}+1;
+                    $new_tx->{_original_url} = $tx->{_original_url};
                     $self->spool_tx($new_tx);
                 }
                 else {
@@ -69,8 +72,9 @@ sub crank {
             else {
 
                 # Callback (TODO)
-                print $tx->req->url . " done!\n";
+                print $tx->{_original_url} . " done!\n";
                 print "Hops: " . ($tx->{_hops} ? $tx->{_hops} : 0) . "\n";
+                print "Ended at: " . $tx->req->url . "\n";
             }
         }
         else {
