@@ -29,6 +29,9 @@ sub spool_tx {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
+        # Kind of a hack to add new properties to a class I am told
+        # vti suggests decorator pattern, could subclass too
+        # or build some data structure with $tx $hops and $original_url...
         $tx->{_hops} = 0 unless $tx->{_hops};
         $tx->{_original_url} = $tx->req->url unless $tx->{_original_url};
         push @{$self->{_txs}}, $tx;
