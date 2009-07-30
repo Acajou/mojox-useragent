@@ -34,16 +34,33 @@ sub new {
     return $self;
 }
 
-sub spool_tx {
+sub _decorate_tx {
+    my $self = shift;
+    my $tx = shift;
+
+    my $hops;
+    my $url;
+    my $cb;
+    ($hops, $url, $cb) = @_ if (@_);
+
+    # Kind of a hack to add new properties to a class I am told.
+    # vti suggests decorator pattern, could subclass too
+    # or build some data structure with $tx $hops and $original_url...
+
+    unless ($tx->{_deco}) {
+        $tx->{_deco} = {
+            hops => $hops ? $hops : 0,
+            original_url => $url ? $url : $tx->req->url,
+            done_cb => $cb ? $cb : $self->default_done_cb
+        };
+    }
+}
+
+sub spool_txs {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
-        # Kind of a hack to add new properties to a class I am told.
-        # vti suggests decorator pattern, could subclass too
-        # or build some data structure with $tx $hops and $original_url...
-        $tx->{_hops} = 0 unless $tx->{_hops};
-        $tx->{_original_url} = $tx->req->url unless $tx->{_original_url};
-        $tx->{_done_cb} = $self->default_done_cb unless $tx->{_done_cb};
+        $self->_decorate_tx($tx) unless $tx->{_deco};
         push @{$self->{_txs}}, $tx;
     }
 }
@@ -64,7 +81,7 @@ sub crank {
     while (my $tx = shift @{$transactions}) {
         if ($tx->is_finished) {
             if ($tx->res->is_status_class(300)
-                && $tx->{_hops} < $self->redirect_limit
+                && $tx->{_deco}->{hops} < $self->redirect_limit
                 && (my $location = $tx->res->headers->header('Location')))
             {
 
@@ -74,10 +91,11 @@ sub crank {
                 unless ($tx->res->code == 305) {
                     # should really clone here...
                     my $new_tx = Mojo::Transaction->new_get($location);
-                    $new_tx->{_hops} = $tx->{_hops}+1;
-                    $new_tx->{_original_url} = $tx->{_original_url};
-                    $new_tx->{_done_cb} = $tx->{_done_cb};
-                    $self->spool_tx($new_tx);
+                    $self->_decorate_tx($new_tx,
+                                        $tx->{_deco}->{hops}+1,
+                                        $tx->{_deco}->{original_url},
+                                        $tx->{_deco}->{done_cb});
+                    $self->spool_txs($new_tx);
                 }
                 else {
 
@@ -86,11 +104,9 @@ sub crank {
             }
             else {
 
-                # Callback (TODO)
-                # print $tx->{_original_url} . " done!\n";
-                # print "Hops: " . ($tx->{_hops} ? $tx->{_hops} : 0) . "\n";
-                # print "Ended at: " . $tx->req->url . "\n";
-                $tx->{_done_cb}->($self, $tx->{_original_url}, $tx);
+                $tx->{_deco}->{done_cb}->($self,
+                                          $tx->{_deco}->{original_url},
+                                          $tx);
             }
         }
         else {
