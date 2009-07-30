@@ -16,6 +16,15 @@ use Mojo::Cookie;
 
 __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
+__PACKAGE__->attr(
+    'default_done_cb',
+    default => sub {
+        return sub {
+            my ($self, $url, $tx) = @_;
+            print "$url done.\n";
+        };
+    }
+);
 
 our $VERSION = '0.001';
 
@@ -29,11 +38,12 @@ sub spool_tx {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
-        # Kind of a hack to add new properties to a class I am told
+        # Kind of a hack to add new properties to a class I am told.
         # vti suggests decorator pattern, could subclass too
         # or build some data structure with $tx $hops and $original_url...
         $tx->{_hops} = 0 unless $tx->{_hops};
         $tx->{_original_url} = $tx->req->url unless $tx->{_original_url};
+        $tx->{_done_cb} = $self->default_done_cb unless $tx->{_done_cb};
         push @{$self->{_txs}}, $tx;
     }
 }
@@ -62,9 +72,11 @@ sub crank {
                 # a Location so shouldn't come in here...
 
                 unless ($tx->res->code == 305) {
+                    # should really clone here...
                     my $new_tx = Mojo::Transaction->new_get($location);
                     $new_tx->{_hops} = $tx->{_hops}+1;
                     $new_tx->{_original_url} = $tx->{_original_url};
+                    $new_tx->{_done_cb} = $tx->{_done_cb};
                     $self->spool_tx($new_tx);
                 }
                 else {
@@ -75,9 +87,10 @@ sub crank {
             else {
 
                 # Callback (TODO)
-                print $tx->{_original_url} . " done!\n";
-                print "Hops: " . ($tx->{_hops} ? $tx->{_hops} : 0) . "\n";
-                print "Ended at: " . $tx->req->url . "\n";
+                # print $tx->{_original_url} . " done!\n";
+                # print "Hops: " . ($tx->{_hops} ? $tx->{_hops} : 0) . "\n";
+                # print "Ended at: " . $tx->req->url . "\n";
+                $tx->{_done_cb}->($self, $tx->{_original_url}, $tx);
             }
         }
         else {
