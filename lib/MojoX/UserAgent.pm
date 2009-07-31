@@ -9,20 +9,28 @@ use base 'Mojo::Base';
 require Carp;
 
 use Mojo::URL;
-use Mojo::Transaction;
 use Mojo::Pipeline;
 use Mojo::Client;
 use Mojo::Cookie;
+use MojoX::UserAgent::Transaction;
 
 __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('follow_redirects', default => 1);
+# pipeline_method: 0 -> Don't Pipeline
+#                  1 -> Pipeline Vertically
+#                  2 -> Pipeline Horizontally
+# (could even allow per-tx setting)
+__PACKAGE__->attr('pipeline_method', default => 0);
+__PACKAGE__->attr('maxconnections', default => 2);
+__PACKAGE__->attr('maxpipereqs', default => 5);
 __PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
 __PACKAGE__->attr(
     'default_done_cb',
     default => sub {
         return sub {
-            my ($self, $url, $tx) = @_;
-            print "$url done.\n";
+            my ($self, $tx) = @_;
+            my $url = $tx->hops ? $tx->original_req->url : $tx->req->url;
+            print "$url done in " . $tx->hops . " hops.\n";
         };
     }
 );
@@ -35,35 +43,23 @@ sub new {
     return $self;
 }
 
-sub _decorate_tx {
-    my $self = shift;
-    my $tx = shift;
-
-    my $hops;
-    my $url;
-    my $cb;
-    ($hops, $url, $cb) = @_ if (@_);
-
-    # Kind of a hack to add new properties to a class I am told.
-    # vti suggests decorator pattern, could subclass too
-    # or build some data structure with $tx $hops and $original_url...
-
-    unless ($tx->{_deco}) {
-        $tx->{_deco} = {
-            hops => $hops ? $hops : 0,
-            original_url => $url ? $url : $tx->req->url,
-            done_cb => $cb ? $cb : $self->default_done_cb
-        };
-    }
-}
-
 sub spool_txs {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
-        $self->_decorate_tx($tx) unless $tx->{_deco};
         push @{$self->{_txs}}, $tx;
     }
+}
+
+sub spool_get {
+    my $self = shift;
+    my $url = shift;
+    my $tx = MojoX::UserAgent::Transaction->new(
+        {   url      => $url,
+            callback => $self->default_done_cb
+        }
+    );
+    push @{$self->{_txs}}, $tx;
 }
 
 sub run_all {
@@ -83,7 +79,7 @@ sub crank {
         if ($tx->is_finished) {
             if ($tx->res->is_status_class(300)
                 && $self->follow_redirects
-                && $tx->{_deco}->{hops} < $self->redirect_limit
+                && $tx->hops < $self->redirect_limit
                 && (my $location = $tx->res->headers->header('Location')))
             {
 
@@ -91,12 +87,20 @@ sub crank {
                 # a Location so shouldn't come in here...
 
                 unless ($tx->res->code == 305) {
+
                     # should really clone here...
-                    my $new_tx = Mojo::Transaction->new_get($location);
-                    $self->_decorate_tx($new_tx,
-                                        $tx->{_deco}->{hops}+1,
-                                        $tx->{_deco}->{original_url},
-                                        $tx->{_deco}->{done_cb});
+                    my $new_tx = MojoX::UserAgent::Transaction->new(
+                        {   url          => $location,
+                            method       => $tx->req->method,
+                            hops         => $tx->hops + 1,
+                            callback     => $tx->done_cb,
+                            original_req => (
+                                  $tx->original_req
+                                ? $tx->original_req
+                                : $tx->req
+                            )
+                        }
+                    );
                     $self->spool_txs($new_tx);
                 }
                 else {
@@ -105,10 +109,7 @@ sub crank {
                 }
             }
             else {
-
-                $tx->{_deco}->{done_cb}->($self,
-                                          $tx->{_deco}->{original_url},
-                                          $tx);
+                $tx->done_cb->($self, $tx);
             }
         }
         else {
