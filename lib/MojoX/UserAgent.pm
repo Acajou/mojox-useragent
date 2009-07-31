@@ -54,9 +54,11 @@ sub spool_txs {
 sub spool_get {
     my $self = shift;
     my $url = shift;
+    my $cb = shift || $self->default_done_cb;
+
     my $tx = MojoX::UserAgent::Transaction->new(
         {   url      => $url,
-            callback => $self->default_done_cb
+            callback => $cb
         }
     );
     push @{$self->{_txs}}, $tx;

@@ -6,23 +6,49 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 2;
+plan tests => 10;
 
 my $ua = MojoX::UserAgent->new;
 
 isa_ok($ua, "MojoX::UserAgent");
 isa_ok($ua, "Mojo::Base");
 
-$ua->spool_get('http://127.0.0.1:3000/');
+$ua->spool_get(
+    'http://labs.kraih.com',
+    sub {
+        my ($ua, $tx) = @_;
+        is($tx->res->code, 200, "labs.kraih.com - Status 200");
+        is($tx->hops, 1, "labs.kraih.com - 1 hop");
+    }
+);
 
 $ua->run_all;
 
-$ua->spool_get('http://labs.kraih.com');
+$ua->spool_get(
+    'http://www.djembe.ca',
+    sub {
+        my ($ua, $tx) = @_;
+        is($tx->res->code, 200, "www.djembe.ca - Status 200");
+        is($tx->hops, 2, "www.djembe.ca - 2 hops");
+    }
+);
 
-$ua->run_all;
+$ua->spool_get(
+    'http://mojolicious.org',
+    sub {
+        my ($ua, $tx) = @_;
+        is($tx->res->code, 200, "mojolicious.org - Status 200");
+        is($tx->hops, 0, "mojolicious.org - no hops");
+    }
+);
 
-$ua->spool_get('http://www.djembe.ca');
-$ua->spool_get('http://mojolicious.org');
-$ua->spool_get('http://search.cpan.org/dist/Mojo/');
+$ua->spool_get(
+    'http://search.cpan.org/dist/Mojo/',
+    sub {
+        my ($ua, $tx) = @_;
+        is($tx->res->code, 200, "search.cpan.org - Status 200");
+        is($tx->hops, 0, "search.cpan.org - no hops");
+    }
+);
 
 $ua->run_all;
