@@ -15,6 +15,7 @@ use Mojo::Client;
 use Mojo::Cookie;
 
 __PACKAGE__->attr('redirect_limit', default => 10);
+__PACKAGE__->attr('follow_redirects', default => 1);
 __PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
 __PACKAGE__->attr(
     'default_done_cb',
@@ -81,6 +82,7 @@ sub crank {
     while (my $tx = shift @{$transactions}) {
         if ($tx->is_finished) {
             if ($tx->res->is_status_class(300)
+                && $self->follow_redirects
                 && $tx->{_deco}->{hops} < $self->redirect_limit
                 && (my $location = $tx->res->headers->header('Location')))
             {

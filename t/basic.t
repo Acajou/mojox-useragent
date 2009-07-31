@@ -6,11 +6,12 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 1;
+plan tests => 2;
 
 my $ua = MojoX::UserAgent->new;
 
 isa_ok($ua, "MojoX::UserAgent");
+isa_ok($ua, "Mojo::Base");
 
 my $tx1 =  Mojo::Transaction->new_get('http://127.0.0.1:3000/');
 
