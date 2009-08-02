@@ -6,7 +6,7 @@ use diagnostics;
 
 use base 'Mojo::Transaction';
 
-use Carp;
+use Carp 'croak';
 
 __PACKAGE__->attr('hops', default => 0);
 __PACKAGE__->attr('done_cb');

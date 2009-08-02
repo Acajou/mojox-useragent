@@ -6,14 +6,14 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 13;
+plan tests => 15;
 
 my $ua = MojoX::UserAgent->new;
 
 isa_ok($ua, "MojoX::UserAgent");
 isa_ok($ua, "Mojo::Base");
 
-$ua->spool_get(
+$ua->get(
     'http://labs.kraih.com',
     sub {
         my ($ua_r, $tx) = @_;
@@ -29,7 +29,7 @@ $ua->spool_get(
 
 $ua->run_all;
 
-$ua->spool_get(
+$ua->get(
     'http://www.djembe.ca',
     sub {
         my ($ua_r, $tx) = @_;
@@ -38,7 +38,7 @@ $ua->spool_get(
     }
 );
 
-$ua->spool_get(
+$ua->get(
     'http://search.cpan.org/dist/Mojo/',
     sub {
         my ($ua_r, $tx) = @_;
@@ -47,7 +47,7 @@ $ua->spool_get(
     }
 );
 
-$ua->spool_get(
+$ua->get(
     'http://mojolicious.org',
     sub {
         my ($ua_r, $tx) = @_;
@@ -57,3 +57,17 @@ $ua->spool_get(
 );
 
 $ua->run_all;
+
+$ua->get(
+    'http://www.google.ca',
+    sub {
+        my ($ua_r, $tx) = @_;
+        is($tx->res->code, 200, "www.google.ca - Status 200");
+    }
+);
+
+$ua->run_all;
+
+# Should have picked up two cookies at this point
+
+is($ua->cookie_jar->size, 2, "Picked up two cookies so far");
