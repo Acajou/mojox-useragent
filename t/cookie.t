@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 5;
+plan tests => 6;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -21,20 +21,20 @@ my $ua = MojoX::UserAgent->new;
     sub handler {
         my ($self, $tx) = @_;
 
-        if ($tx->req->url =~ m{^/set}) {
+        if ($tx->req->url->path =~ m{^/set}) {
 
             my $cookie = Mojo::Cookie::Response->new;
             $cookie->name('testcookie');
             $cookie->value('1969');
             $cookie->path('/');
 
-            my $url = $tx->req->url->clone;
+            my $url = $tx->req->url->to_abs;
             $url->path('/echo');
             $tx->res->code(302);
             $tx->res->headers->set_cookie($cookie);
             $tx->res->headers->location($url);
         }
-        elsif ($tx->req->url =~ m{^/echo}) {
+        elsif ($tx->req->url->path =~ m{^/echo}) {
 
             my $cookies = $tx->req->cookies;
 
@@ -49,7 +49,7 @@ my $ua = MojoX::UserAgent->new;
             $tx->res->body($body);
 
         }
-        elsif ($tx->req->url =~ m{^/unset}) {
+        elsif ($tx->req->url->path =~ m{^/unset}) {
 
             my $cookie = Mojo::Cookie::Response->new;
             $cookie->name('testcookie');
@@ -62,7 +62,7 @@ my $ua = MojoX::UserAgent->new;
             $tx->res->headers->set_cookie($cookie);
         }
         else {
-            my $url = $tx->req->url->clone;
+            my $url = $tx->req->url->to_abs;
             $url->path('/echo');
             $tx->res->code(302);
             $tx->res->headers->location($url);
@@ -84,6 +84,8 @@ $ua->get(
         is($tx->hops, 1, "Cookie Test1 - 1 hop");
         is($tx->req->url->path, '/echo',
             "Cookie Test1 - request path OK");
+        is($tx->req->url, 'http://www.notreal.com/echo',
+            "Cookie Test1 - request url OK");
         like($tx->res->body, qr/testcookie=\"1969\"/,
             "Cookie Test1 - cookie OK");
     }
