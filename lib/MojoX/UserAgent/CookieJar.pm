@@ -36,11 +36,21 @@ sub store {
                     && $candidate->name eq $cookie->name)
                 {
 
-                    # Got a match, replace
-                    # Should this be in-place (as below), or should we
-                    # delete the old one and push new one?
-                    $self->_jar->{$sld}->[$i] = $cookie;
-                    $found = 1;
+                    # Check for unset
+                    if (   $cookie->max_age
+                        && $cookie->max_age == 0)
+                    {
+                        splice @{$self->_jar->{$sld}}, $i, 1;
+                        $self->{size}--;
+                    }
+                    else {
+
+                        # Got a match: replace.
+                        # Should this be in-place (as below), or should we
+                        # delete the old one and push new one?
+                        $self->_jar->{$sld}->[$i] = $cookie;
+                        $found = 1;
+                    }
                 }
             }
             unless ($found) {

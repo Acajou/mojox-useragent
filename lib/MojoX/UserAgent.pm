@@ -43,6 +43,8 @@ __PACKAGE__->attr(
     }
 );
 
+__PACKAGE__->attr('app');
+
 our $VERSION = '0.001';
 
 sub new {
@@ -83,8 +85,10 @@ sub run_all {
 
 sub crank {
     my $self = shift;
+
+    $self->app ? $self->_spin_app : $self->_spin;
+
     my $transactions = $self->{_txs};
-    $self->_client->spin(@{$transactions});
     my @buffer;
     while (my $tx = shift @{$transactions}) {
 
@@ -141,9 +145,22 @@ sub crank {
     return scalar @{$transactions};
 }
 
+sub _spin {
+    my $self = shift;
+    $self->_client->spin(@{$self->{_txs}});
+}
+sub _spin_app {
+    my $self = shift;
+    #can only spin one so pick at random
+    my $tx = $self->{_txs}->[int(rand(scalar @{$self->{_txs}}))];
+    $self->_client->spin_app($self->{app}, $tx);
+}
+
 sub extract_cookies {
     my ($self, $tx) = @_;
 
+    # should use @cookies = $tx->res->cookies here
+    # but need to fix it first.
     my @cookies;
     my $cookie_header;
 
