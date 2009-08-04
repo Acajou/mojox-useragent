@@ -34,8 +34,10 @@ sub store {
                     && $candidate->name eq $cookie->name)
                 {
 
+                    $found = 1;
+
                     # Check for unset
-                    if (   $cookie->max_age
+                    if (defined $cookie->max_age
                         && $cookie->max_age == 0)
                     {
                         splice @{$store}, $i, 1;
@@ -47,10 +49,12 @@ sub store {
                         # Should this be in-place (as below), or should we
                         # delete the old one and push new one?
                         $store->[$i] = $cookie;
-                        $found = 1;
                     }
+
+                    last;
                 }
             }
+
             unless ($found) {
                 # push may not be enough here, might want to order by
                 # longest path?
@@ -73,7 +77,7 @@ sub cookies_for_url {
     croak 'Must provide url' unless $url;
 
     my @cookies = ();
-    my $urlobj;
+    my $urlobj = Mojo::URL->new;
 
     ref $url && $url->isa('Mojo::URL')
       ? $urlobj = $url
@@ -81,7 +85,7 @@ sub cookies_for_url {
 
     croak 'Url must be absolute' unless $urlobj->is_abs;
 
-    my $domain = $url->host;
+    my $domain = $urlobj->host;
 
     do {
         my $store = $self->_jar->{$domain};
