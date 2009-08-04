@@ -19,18 +19,16 @@ sub store {
 
         croak('Can\'t store cookie without domain') unless $cookie->domain;
 
-        # Note to self: check DNS spec(s) for use of extended characters
-        # in domain names... (ie \w might not cut it...)
-        $cookie->domain =~ m/(\w+\.\w+)$/x;
-        my $sld = $1;    # Second Level Domain (eg google.ca)
+        my $domain = $cookie->domain;
+        my $store = $self->_jar->{$domain};
 
-        if ($self->_jar->{$sld}) {
+        if ($store) {
 
             # Do we already have this cookie?
             my $found = 0;
-            for my $i (0 .. $#{$self->_jar->{$sld}}) {
+            for my $i (0 .. $#{$store}) {
 
-                my $candidate = $self->_jar->{$sld}->[$i];
+                my $candidate = $store->[$i];
                 if (   $candidate->domain eq $cookie->domain
                     && $candidate->path eq $cookie->path
                     && $candidate->name eq $cookie->name)
@@ -40,7 +38,7 @@ sub store {
                     if (   $cookie->max_age
                         && $cookie->max_age == 0)
                     {
-                        splice @{$self->_jar->{$sld}}, $i, 1;
+                        splice @{$store}, $i, 1;
                         $self->{size}--;
                     }
                     else {
@@ -48,18 +46,20 @@ sub store {
                         # Got a match: replace.
                         # Should this be in-place (as below), or should we
                         # delete the old one and push new one?
-                        $self->_jar->{$sld}->[$i] = $cookie;
+                        $store->[$i] = $cookie;
                         $found = 1;
                     }
                 }
             }
             unless ($found) {
-                push @{$self->_jar->{$sld}}, $cookie;
+                # push may not be enough here, might want to order by
+                # longest path?
+                push @{$store}, $cookie;
                 $self->{size}++;
             }
         }
         else {
-            $self->_jar->{$sld} = [$cookie];
+            $self->_jar->{$domain} = [$cookie];
             $self->{size}++;
         }
     }
@@ -70,7 +70,46 @@ sub cookies_for_url {
     my $self = shift;
     my $url = shift;
 
-    return;
+    croak 'Must provide url' unless $url;
+
+    my @cookies = ();
+    my $urlobj;
+
+    ref $url && $url->isa('Mojo::URL')
+      ? $urlobj = $url
+      : $urlobj->parse($url);
+
+    croak 'Url must be absolute' unless $urlobj->is_abs;
+
+    my $domain = $url->host;
+
+    do {
+        my $store = $self->_jar->{$domain};
+
+        if ($store) {
+
+            for my $i (0 .. $#{$store}) {
+
+                my $candidate = $store->[$i];
+                my $path      = $candidate->path;
+
+                if ($urlobj->path =~ m{^$path}) {
+                    unless ($candidate->port) {
+                        push @cookies, $candidate;
+                    }
+                    else {
+                        my $port = $urlobj->port || '80';
+                        push @cookies, $candidate
+                          if ($candidate->port =~ m{\b$port\b});
+                    }
+                }
+            }
+        }
+    } while ($domain =~ s{^\w+\.(.*)}{$1}x && $domain =~ m{(\w+\.\w+)$}x);
+    # Note to self: check DNS spec(s) for use of extended characters
+    # in domain names... (ie \w might not cut it...)
+
+    return @cookies;
 }
 
 

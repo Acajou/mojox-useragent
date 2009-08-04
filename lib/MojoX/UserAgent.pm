@@ -110,9 +110,21 @@ sub crank {
 
                 unless ($tx->res->code == 305) {
 
-                    # should really clone here...
+                    # Give priority to the new URL where it gives info,
+                    # otherwise, keep elements of the old URL...
+                    my $newu = Mojo::URL->new();
+                    $newu->parse($location);
+                    my $oldu = $tx->req->url;
+
+                    $newu->scheme($oldu->scheme)       unless $newu->is_abs;
+                    $newu->authority($oldu->authority) unless $newu->is_abs;
+
+                    $newu->path($oldu->path)     unless $newu->path;
+                    $newu->path($oldu->query)    unless $newu->query;
+                    $newu->path($oldu->fragment) unless $newu->fragment;
+
                     my $new_tx = MojoX::UserAgent::Transaction->new(
-                        {   url          => $location,
+                        {   url          => $newu,
                             method       => $tx->req->method,
                             hops         => $tx->hops + 1,
                             callback     => $tx->done_cb,
@@ -193,17 +205,26 @@ sub scrub_cookies {
     for my $cookie (@cookies) {
 
         # Domain check
-        unless ($cookie->domain) {
-            $cookie->domain($tx->req->url->host);
+        if ($cookie->domain) {
+            # TODO: check that domain value matches request url;
         }
         else {
-            # TODO: check that domain value matches request url;
+            $cookie->domain($tx->req->url->host);
         }
 
         # Port check
         if ($cookie->port) {
             # TODO: should be comma separated list of numbers
         }
+
+        # Path check
+        if ($cookie->path) {
+            # TODO: should be a prefix of the request URI
+        }
+        else {
+            $cookie->path($tx->req->url->path);
+        }
+
         push @cleared, $cookie;
     }
     return @cleared;

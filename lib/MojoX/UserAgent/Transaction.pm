@@ -22,7 +22,10 @@ sub new {
     croak('Missing arguments')
       if (!defined($arg_ref->{url}) || !defined($arg_ref->{callback}));
 
-    $req->url->parse($arg_ref->{url});
+    my $url = $arg_ref->{url};
+    ref $url && $url->isa('Mojo::URL')
+      ? $req->url($url)
+      : $req->url->parse($url);
 
     $self->done_cb($arg_ref->{callback});
 
@@ -44,4 +47,11 @@ sub new {
     return $self;
 }
 
+sub client_connect {
+    my $self = shift->SUPER::client_connect();
+
+    # ADD COOKIES HERE
+
+    return $self;
+}
 1;
