@@ -8,7 +8,7 @@ use Mojo::URL;
 use Mojo::Cookie::Response;
 use MojoX::UserAgent::CookieJar;
 
-plan tests => 12;
+plan tests => 14;
 
 my $jar = MojoX::UserAgent::CookieJar->new;
 my $cookie1 = Mojo::Cookie::Response->new;
@@ -44,21 +44,23 @@ my $returned;
 $returned = $jar->cookies_for_url('http://boo.acajou.ca/foo/');
 
 is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
-is(${returned}->[0], $cookie1, 'Jar returned right cookie(s).');
+is(${returned}->[0], $cookie1, 'Jar returned right cookie.');
 
 $returned = $jar->cookies_for_url('http://bon.acajou.ca/bar/baz/');
 
 is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
-is($returned->[0], $cookie2, 'Jar returned right cookie(s).');
+is($returned->[0], $cookie2, 'Jar returned right cookie.');
 
 $returned = $jar->cookies_for_url('http://www.acajou.ca/');
 
 is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
-is($returned->[0], $cookie3, 'Jar returned right cookie(s).');
+is($returned->[0], $cookie3, 'Jar returned right cookie.');
 
 $returned = $jar->cookies_for_url('http://www.acajou.ca/foo/test#zop');
 
 is(scalar @{$returned}, 2, 'Jar returned right number of cookies.');
+isnt($returned->[0], $cookie2, 'Should not return $cookie2 (1/2)');
+isnt($returned->[1], $cookie2, 'Should not return $cookie2 (1/2)');
 
 
 # Delete cookie
