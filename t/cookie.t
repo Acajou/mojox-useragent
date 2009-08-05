@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 13;
+plan tests => 17;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -61,7 +61,15 @@ my $ua = MojoX::UserAgent->new;
             $tx->res->headers->location('/echo');
             $tx->res->headers->set_cookie($cookie);
         }
+        elsif ($tx->req->url->path =~ m{^/loop/(\d+)}) {
+
+            my $x = $1;
+            $x++;
+            $tx->res->code(302);
+            $tx->res->headers->location("/loop/$x");
+        }
         else {
+
             my $url = $tx->req->url->to_abs;
             $url->path('/echo');
             $tx->res->code(302);
@@ -80,16 +88,16 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Cookie Test1 - Status 200");
-        is($tx->hops, 1, "Cookie Test1 - 1 hop");
+        is($tx->res->code, 200, "Test1 (set) - Status 200");
+        is($tx->hops, 1, "Test1 (set) - 1 hop");
         is($tx->req->url->path, '/echo',
-            "Cookie Test1 - request path OK");
+            "Test1 (set) - request path OK");
         is($tx->req->url, 'http://www.notreal.com/echo',
-            "Cookie Test1 - request url OK");
+            "Test1 (set) - request url OK");
         is($tx->res->headers->content_type, 'text/plain',
-            "Cookie Test1 - content-type OK");
+            "Test1 (set) - content-type OK");
         like($tx->res->body, qr/testcookie=1969/,
-            "Cookie Test1 - cookie OK");
+            "Test1 (set) - cookie OK");
     }
 );
 
@@ -102,16 +110,32 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Cookie Test2 - Status 200");
-        is($tx->hops, 1, "Cookie Test2 - 1 hop");
+        is($tx->res->code, 200, "Test2 (unset) - Status 200");
+        is($tx->hops, 1, "Test2 (unset) - 1 hop");
         is($tx->req->url->path, '/echo',
-            "Cookie Test2 - request path OK");
+            "Test2 (unset) - request path OK");
         is($tx->req->url, 'http://www.notreal.com/echo',
-            "Cookie Test2 - request url OK");
+            "Test2 (unset) - request url OK");
         is($tx->res->headers->content_type, 'text/plain',
-            "Cookie Test2 - content-type OK");
+            "Test2 (unset) - content-type OK");
         unlike($tx->res->body, qr/testcookie=1969/,
-            "Cookie Test2 - cookie gone");
+            "Test2 (unset) - cookie gone");
+    }
+);
+
+$ua->run_all;
+
+$ua->get(
+    'http://www.notreal.com/loop/0',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 302, "Test3 (loop) - Status 302");
+        is($tx->hops, 10, "Test3 (loop) - 10 hops");
+        is($tx->req->url->path, '/loop/10',
+            "Test3 (loop) - request path OK");
+        is($tx->req->url, 'http://www.notreal.com/loop/10',
+            "Test3 (loop) - request url OK");
     }
 );
 
