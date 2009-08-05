@@ -113,7 +113,7 @@ sub cookies_for_url {
     # Note to self: check DNS spec(s) for use of extended characters
     # in domain names... (ie \w might not cut it...)
 
-    return @cookies;
+    return [@cookies];
 }
 
 

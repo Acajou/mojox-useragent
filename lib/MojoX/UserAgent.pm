@@ -69,7 +69,8 @@ sub get {
 
     my $tx = MojoX::UserAgent::Transaction->new(
         {   url      => $url,
-            callback => $cb
+            callback => $cb,
+            ua       => $self
         }
     );
     push @{$self->{_txs}}, $tx;
@@ -128,6 +129,7 @@ sub crank {
                             method       => $tx->req->method,
                             hops         => $tx->hops + 1,
                             callback     => $tx->done_cb,
+                            ua           => $self,
                             original_req => (
                                   $tx->original_req
                                 ? $tx->original_req
@@ -228,6 +230,28 @@ sub scrub_cookies {
         push @cleared, $cookie;
     }
     return @cleared;
+}
+
+sub cookies_for_url {
+    my $self = shift;
+
+    my $resp_cookies = $self->cookie_jar->cookies_for_url(@_);
+
+    return [] unless @{$resp_cookies};
+
+    # now make request cookies
+    my @req_cookies = ();
+    for my $rc (@{$resp_cookies}) {
+          my $cookie = Mojo::Cookie::Request->new;
+          $cookie->name($rc->name);
+          $cookie->value($rc->value);
+          $cookie->path($rc->path);
+          $cookie->version($rc->version) if defined $rc->version;
+
+          push @req_cookies, $cookie;
+    }
+
+    return [@req_cookies];
 }
 
 1;

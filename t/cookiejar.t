@@ -39,26 +39,26 @@ $jar->store($cookie1, $cookie2, $cookie3);
 
 is($jar->size, 3, "Stored 3 cookies");
 
-my @returned;
+my $returned;
 
-@returned = $jar->cookies_for_url('http://boo.acajou.ca/foo/');
+$returned = $jar->cookies_for_url('http://boo.acajou.ca/foo/');
 
-is(scalar @returned, 1, 'Jar returned right number of cookies.');
-is($returned[0], $cookie1, 'Jar returned right cookie(s).');
+is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
+is(${returned}->[0], $cookie1, 'Jar returned right cookie(s).');
 
-@returned = $jar->cookies_for_url('http://bon.acajou.ca/bar/baz/');
+$returned = $jar->cookies_for_url('http://bon.acajou.ca/bar/baz/');
 
-is(scalar @returned, 1, 'Jar returned right number of cookies.');
-is($returned[0], $cookie2, 'Jar returned right cookie(s).');
+is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
+is($returned->[0], $cookie2, 'Jar returned right cookie(s).');
 
-@returned = $jar->cookies_for_url('http://www.acajou.ca/');
+$returned = $jar->cookies_for_url('http://www.acajou.ca/');
 
-is(scalar @returned, 1, 'Jar returned right number of cookies.');
-is($returned[0], $cookie3, 'Jar returned right cookie(s).');
+is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
+is($returned->[0], $cookie3, 'Jar returned right cookie(s).');
 
-@returned = $jar->cookies_for_url('http://www.acajou.ca/foo/test#zop');
+$returned = $jar->cookies_for_url('http://www.acajou.ca/foo/test#zop');
 
-is(scalar @returned, 2, 'Jar returned right number of cookies.');
+is(scalar @{$returned}, 2, 'Jar returned right number of cookies.');
 
 
 # Delete cookie
@@ -72,11 +72,11 @@ $cookie_unset->max_age(0);
 
 $jar->store($cookie_unset);
 
-@returned = $jar->cookies_for_url('http://www.acajou.ca/foo/test#zop');
+$returned = $jar->cookies_for_url('http://www.acajou.ca/foo/test#zop');
 
 is($jar->size, 2, "One cookie removed");
-is(scalar @returned, 1, 'Jar returned right number of cookies.');
-is($returned[0], $cookie1, 'Jar returned right cookie(s).');
+is(scalar @{$returned}, 1, 'Jar returned right number of cookies.');
+is($returned->[0], $cookie1, 'Jar returned right cookie(s).');
 
-@returned = $jar->cookies_for_url('http://www.not.ca/foo/test#zop');
-is(scalar @returned, 0, 'Jar returned right number of cookies.');
+$returned = $jar->cookies_for_url('http://www.not.ca/foo/test#zop');
+is(scalar @{$returned}, 0, 'Jar returned right number of cookies.');

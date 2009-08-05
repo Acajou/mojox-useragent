@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 6;
+plan tests => 7;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -44,7 +44,7 @@ my $ua = MojoX::UserAgent->new;
 
             }
             $tx->res->code(200);
-            $tx->res->headers->content_type('/text/plain');
+            $tx->res->headers->content_type('text/plain');
 
             $tx->res->body($body);
 
@@ -86,7 +86,9 @@ $ua->get(
             "Cookie Test1 - request path OK");
         is($tx->req->url, 'http://www.notreal.com/echo',
             "Cookie Test1 - request url OK");
-        like($tx->res->body, qr/testcookie=\"1969\"/,
+        is($tx->res->headers->content_type, 'text/plain',
+            "Cookie Test1 - content-type OK");
+        like($tx->res->body, qr/testcookie=1969/,
             "Cookie Test1 - cookie OK");
     }
 );
