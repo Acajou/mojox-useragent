@@ -124,6 +124,8 @@ sub crank {
                     $newu->path($oldu->query)    unless $newu->query;
                     $newu->path($oldu->fragment) unless $newu->fragment;
 
+                    # Note should check res->code to see if we should
+                    # re-use the req->method...
                     my $new_tx = MojoX::UserAgent::Transaction->new(
                         {   url          => $newu,
                             method       => $tx->req->method,

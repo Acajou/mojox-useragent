@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 7;
+plan tests => 13;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -38,7 +38,7 @@ my $ua = MojoX::UserAgent->new;
 
             my $cookies = $tx->req->cookies;
 
-            my $body = "";
+            my $body = "xyz";
             for my $cookie (@{$cookies}) {
                 $body .= $cookie->to_string . "\n";
 
@@ -90,6 +90,28 @@ $ua->get(
             "Cookie Test1 - content-type OK");
         like($tx->res->body, qr/testcookie=1969/,
             "Cookie Test1 - cookie OK");
+    }
+);
+
+$ua->run_all;
+
+$ua->app($app);
+
+$ua->get(
+    'http://www.notreal.com/unset/',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 200, "Cookie Test2 - Status 200");
+        is($tx->hops, 1, "Cookie Test2 - 1 hop");
+        is($tx->req->url->path, '/echo',
+            "Cookie Test2 - request path OK");
+        is($tx->req->url, 'http://www.notreal.com/echo',
+            "Cookie Test2 - request url OK");
+        is($tx->res->headers->content_type, 'text/plain',
+            "Cookie Test2 - content-type OK");
+        unlike($tx->res->body, qr/testcookie=1969/,
+            "Cookie Test2 - cookie gone");
     }
 );
 
