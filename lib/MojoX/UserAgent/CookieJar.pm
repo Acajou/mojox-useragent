@@ -109,9 +109,10 @@ sub cookies_for_url {
                 }
             }
         }
-    } while ($domain =~ s{^\w+\.(.*)}{$1}x && $domain =~ m{(\w+\.\w+)$}x);
+    } while (   $domain =~ s{^[\w\-]+\.(.*)}{$1}x
+             && $domain =~ m{([\w\-]+\.[\w\-]+)$}x);
     # Note to self: check DNS spec(s) for use of extended characters
-    # in domain names... (ie \w might not cut it...)
+    # in domain names... (ie [\w\-] might not cut it...)
 
     return [@cookies];
 }

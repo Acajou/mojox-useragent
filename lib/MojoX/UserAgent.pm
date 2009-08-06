@@ -26,6 +26,7 @@ __PACKAGE__->attr('pipeline_method', default => 0);
 __PACKAGE__->attr('maxconnections', default => 2);
 __PACKAGE__->attr('maxpipereqs', default => 5);
 
+__PACKAGE__->attr('validate_cookie_paths', default => 0);
 
 __PACKAGE__->attr('_tx_count', default => 0);
 __PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
@@ -175,22 +176,9 @@ sub _spin_app {
 sub extract_cookies {
     my ($self, $tx) = @_;
 
-    # should use @cookies = $tx->res->cookies here
-    # but need to fix it first.
-    my @cookies;
-    my $cookie_header;
+    my $cookies = $tx->res->cookies;
 
-    if ( $cookie_header = $tx->res->headers->set_cookie) {
-        my $coref =  Mojo::Cookie::Response->parse($cookie_header);
-        push @cookies, @{$coref};
-    }
-    if ( $cookie_header = $tx->res->headers->set_cookie2) {
-        my $coref =  Mojo::Cookie::Response->parse($cookie_header);
-        push @cookies, @{$coref};
-    }
-
-
-    if (@cookies) {
+    if (@{$cookies}) {
         my @cleared = $self->scrub_cookies($tx, @cookies);
         $self->cookie_jar->store(@cleared) if @cleared;
     }
@@ -210,13 +198,13 @@ sub scrub_cookies {
 
         # Domain check
         if ($cookie->domain) {
-            # TODO: check that domain value matches request url;
             my $domain = $cookie->domain;
-            my $host = $tx->req->url->host;
-            unless (   $domain =~ m{\w+\.\w+$}x
-                    && ($host =~ s/\.$domain$//x || $host =~ s/^$domain$//x)
-                    && $host !~ m{\.})
+            my $host   = $tx->req->url->host;
+            unless ($domain =~ m{[\w\-]+\.[\w\-]+$}x
+                && ($host =~ s/\.$domain$//x || $host =~ s/^$domain$//x)
+                && $host !~ m{\.})
             {
+
                 # Note that in theory we should add to this a refusal if
                 # the domain matches one of these:
                 # http://publicsuffix.org/list/
@@ -229,12 +217,19 @@ sub scrub_cookies {
 
         # Port check
         if ($cookie->port) {
-            # TODO: should be comma separated list of numbers
+
+            # Should be comma separated list of numbers
+            next unless $cookie->port =~ m/^[\d\,]+$/;
         }
 
         # Path check
         if ($cookie->path) {
-            # TODO: should be a prefix of the request URI
+
+            # Should be a prefix of the request URI
+            if ($self->validate_cookie_paths) {
+                my $cpath = $cookie->path;
+                next unless ($tx->req->url->path =~ m/^$cpath/);
+            }
         }
         else {
             $cookie->path($tx->req->url->path);
