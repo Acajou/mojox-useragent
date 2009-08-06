@@ -98,9 +98,10 @@ sub crank {
 
             $self->{_tx_count}++;
 
-            # Check for Cookies:
+            # Check for cookies
             $self->extract_cookies($tx);
 
+            # Check for redirect
             if ($tx->res->is_status_class(300)
                 && $self->follow_redirects
                 && $tx->hops < $self->redirect_limit
@@ -179,7 +180,7 @@ sub extract_cookies {
     my $cookies = $tx->res->cookies;
 
     if (@{$cookies}) {
-        my @cleared = $self->scrub_cookies($tx, @cookies);
+        my @cleared = $self->scrub_cookies($tx, @{$cookies});
         $self->cookie_jar->store(@cleared) if @cleared;
     }
 
@@ -198,11 +199,16 @@ sub scrub_cookies {
 
         # Domain check
         if ($cookie->domain) {
+
             my $domain = $cookie->domain;
             my $host   = $tx->req->url->host;
-            unless ($domain =~ m{[\w\-]+\.[\w\-]+$}x
-                && ($host =~ s/\.$domain$//x || $host =~ s/^$domain$//x)
-                && $host !~ m{\.})
+
+            # strip any leading dot
+            $cookie->domain($domain) if ($domain =~ s/^\.//);
+
+            unless (   $domain =~ m{[\w\-]+\.[\w\-]+$}x
+                    && ($host =~ s/\.$domain$//x || $host =~ s/^$domain$//x)
+                    && $host !~ m{\.})
             {
 
                 # Note that in theory we should add to this a refusal if
