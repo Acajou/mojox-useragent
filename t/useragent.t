@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 17;
+plan tests => 32;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -67,6 +67,47 @@ my $ua = MojoX::UserAgent->new;
             $x++;
             $tx->res->code(302);
             $tx->res->headers->location("/loop/$x");
+        }
+        elsif ($tx->req->url->path =~ m{^/multi}) {
+
+            my $cookie1 = Mojo::Cookie::Response->new;
+            $cookie1->name('multi1');
+            $cookie1->value('111');
+            $cookie1->path('/');
+            $cookie1->domain('notreal.com');
+            $cookie1->max_age(6000);
+
+            my $cookie2 = Mojo::Cookie::Response->new;
+            $cookie2->name('multi2');
+            $cookie2->value('222');
+            $cookie2->path('/');
+            $cookie2->domain('notreal.com');
+            $cookie2->max_age(6000);
+
+            $tx->res->code(302);
+            $tx->res->headers->set_cookie($cookie1, $cookie2);
+            $tx->res->headers->location('/echo');
+        }
+        elsif ($tx->req->url->path =~ m{^/baddomain/(\d+)}) {
+
+            my $choice = $1;
+            my $cookie1 = Mojo::Cookie::Response->new;
+            $cookie1->name('testevil');
+            $cookie1->value('shouldntwork');
+            $cookie1->path('/');
+            $cookie1->domain('eal.com');
+            $cookie1->max_age(6000);
+
+            my $cookie2 = Mojo::Cookie::Response->new;
+            $cookie2->name('testevil2');
+            $cookie2->value('shouldntwork');
+            $cookie2->path('/');
+            $cookie2->domain('.com');
+            $cookie2->max_age(6000);
+
+            $tx->res->code(302);
+            $tx->res->headers->set_cookie($choice ? $cookie1 : $cookie2);
+            $tx->res->headers->location('/echo');
         }
         else {
 
@@ -140,3 +181,67 @@ $ua->get(
 );
 
 $ua->run_all;
+
+$ua->get(
+    'http://www.notreal.com/multi/',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 200, "Test4 (multi) - Status 200");
+        is($tx->hops, 1, "Test4 (multi) - 1 hop");
+        is($tx->req->url->path, '/echo',
+            "Test4 (multi) - request path OK");
+        like($tx->res->body, qr/multi1=111/,
+            "Test4 (multi) - 1st cookie found");
+        like($tx->res->body, qr/multi2=222/,
+            "Test4 (multi) - 2nd cookie found");
+    }
+);
+
+$ua->run_all;
+
+
+$ua->get(
+    'http://www.notreal.com/baddomain/0',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 200, "Test4 (bad domain) - Status 200");
+        is($tx->hops, 1, "Test5 (bad domain) - 1 hop");
+        is($tx->req->url->path, '/echo',
+            "Test5 (bad domain) - request path OK");
+        unlike($tx->res->body, qr/testevil/,
+            "Test5 (bad domain) - bad cookie absent");
+    }
+);
+
+$ua->get(
+    'http://www.notreal.com/baddomain/1',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 200, "Test4 (bad domain) - Status 200");
+        is($tx->hops, 1, "Test5 (bad domain) - 1 hop");
+        is($tx->req->url->path, '/echo',
+            "Test5 (bad domain) - request path OK");
+        unlike($tx->res->body, qr/testevil/,
+            "Test5 (bad domain) - bad cookie absent");
+    }
+);
+
+$ua->run_all;
+
+
+$ua->get(
+    'http://www.eal.com/echo/',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 200, "Test4 (bad domain) - Status 200");
+        unlike($tx->res->body, qr/testevil/,
+            "Test5 (bad domain) - bad cookie absent");
+    }
+);
+
+$ua->run_all;
+

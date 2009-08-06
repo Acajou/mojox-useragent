@@ -211,6 +211,9 @@ sub scrub_cookies {
         # Domain check
         if ($cookie->domain) {
             # TODO: check that domain value matches request url;
+            my $domain = $cookie->domain;
+            next unless (   $domain =~ m{\w+\.\w+$}x
+                         && $tx->req->url->host =~ m{\b$domain$}x);
         }
         else {
             $cookie->domain($tx->req->url->host);
