@@ -88,9 +88,8 @@ my $ua = MojoX::UserAgent->new;
             $tx->res->headers->set_cookie($cookie1, $cookie2);
             $tx->res->headers->location('/echo');
         }
-        elsif ($tx->req->url->path =~ m{^/baddomain/(\d+)}) {
+        elsif ($tx->req->url->path =~ m{^/baddomain}) {
 
-            my $choice = $1;
             my $cookie1 = Mojo::Cookie::Response->new;
             $cookie1->name('testevil');
             $cookie1->value('shouldntwork');
@@ -106,7 +105,22 @@ my $ua = MojoX::UserAgent->new;
             $cookie2->max_age(6000);
 
             $tx->res->code(302);
-            $tx->res->headers->set_cookie($choice ? $cookie1 : $cookie2);
+            $tx->res->headers->set_cookie($cookie1, $cookie2);
+            $tx->res->headers->location('/echo');
+        }
+        elsif ($tx->req->url->path =~ m{^/twolevelsup}) {
+
+            my $domain = $tx->req->url->to_abs->host;
+            $domain =~ s/^(\w+\.\w+\.)//;
+            my $cookie = Mojo::Cookie::Response->new;
+            $cookie->name('testevil');
+            $cookie->value('shouldntwork');
+            $cookie->path('/');
+            $cookie->domain("$domain");
+            $cookie->max_age(6000);
+
+            $tx->res->code(302);
+            $tx->res->headers->set_cookie($cookie);
             $tx->res->headers->location('/echo');
         }
         else {
@@ -129,16 +143,14 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Test1 (set) - Status 200");
-        is($tx->hops, 1, "Test1 (set) - 1 hop");
-        is($tx->req->url->path, '/echo',
-            "Test1 (set) - request path OK");
+        is($tx->res->code,      200,     "Test1 (set cookie) - Status 200");
+        is($tx->hops,           1,       "Test1 - 1 hop");
+        is($tx->req->url->path, '/echo', "Test1 - request path OK");
         is($tx->req->url, 'http://www.notreal.com/echo',
-            "Test1 (set) - request url OK");
-        is($tx->res->headers->content_type, 'text/plain',
-            "Test1 (set) - content-type OK");
-        like($tx->res->body, qr/testcookie=1969/,
-            "Test1 (set) - cookie OK");
+            "Test1 - request url OK");
+        is($tx->res->headers->content_type,
+            'text/plain', "Test1 - content-type OK");
+        like($tx->res->body, qr/testcookie=1969/, "Test1 - cookie OK");
     }
 );
 
@@ -151,16 +163,14 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Test2 (unset) - Status 200");
-        is($tx->hops, 1, "Test2 (unset) - 1 hop");
-        is($tx->req->url->path, '/echo',
-            "Test2 (unset) - request path OK");
+        is($tx->res->code,      200,     "Test2 (unset cookie) - Status 200");
+        is($tx->hops,           1,       "Test2 - 1 hop");
+        is($tx->req->url->path, '/echo', "Test2 - request path OK");
         is($tx->req->url, 'http://www.notreal.com/echo',
-            "Test2 (unset) - request url OK");
-        is($tx->res->headers->content_type, 'text/plain',
-            "Test2 (unset) - content-type OK");
-        unlike($tx->res->body, qr/testcookie=1969/,
-            "Test2 (unset) - cookie gone");
+            "Test2 - request url OK");
+        is($tx->res->headers->content_type,
+            'text/plain', "Test2 - content-type OK");
+        unlike($tx->res->body, qr/testcookie=1969/, "Test2 - cookie gone");
     }
 );
 
@@ -171,12 +181,13 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 302, "Test3 (loop) - Status 302");
-        is($tx->hops, 10, "Test3 (loop) - 10 hops");
-        is($tx->req->url->path, '/loop/10',
-            "Test3 (loop) - request path OK");
-        is($tx->req->url, 'http://www.notreal.com/loop/10',
-            "Test3 (loop) - request url OK");
+        is($tx->res->code, 302, "Test3 (request loop) - Status 302");
+        is($tx->hops, 10, "Test3 - 10 hops");
+        is($tx->req->url->path, '/loop/10', "Test3 - request path OK");
+        is( $tx->req->url,
+            'http://www.notreal.com/loop/10',
+            "Test3 - request url OK"
+        );
     }
 );
 
@@ -187,14 +198,11 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Test4 (multi) - Status 200");
-        is($tx->hops, 1, "Test4 (multi) - 1 hop");
-        is($tx->req->url->path, '/echo',
-            "Test4 (multi) - request path OK");
-        like($tx->res->body, qr/multi1=111/,
-            "Test4 (multi) - 1st cookie found");
-        like($tx->res->body, qr/multi2=222/,
-            "Test4 (multi) - 2nd cookie found");
+        is($tx->res->code, 200, "Test4 (multiple set-cookie) - Status 200");
+        is($tx->hops, 1, "Test4 - 1 hop");
+        is($tx->req->url->path, '/echo', "Test4 - request path OK");
+        like($tx->res->body, qr/multi1=111/, "Test4 - 1st cookie found");
+        like($tx->res->body, qr/multi2=222/, "Test4 - 2nd cookie found");
     }
 );
 
@@ -202,30 +210,14 @@ $ua->run_all;
 
 
 $ua->get(
-    'http://www.notreal.com/baddomain/0',
+    'http://www.notreal.com/baddomain/',
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Test4 (bad domain) - Status 200");
-        is($tx->hops, 1, "Test5 (bad domain) - 1 hop");
-        is($tx->req->url->path, '/echo',
-            "Test5 (bad domain) - request path OK");
-        unlike($tx->res->body, qr/testevil/,
-            "Test5 (bad domain) - bad cookie absent");
-    }
-);
-
-$ua->get(
-    'http://www.notreal.com/baddomain/1',
-    sub {
-        my ($ua_r, $tx) = @_;
-
-        is($tx->res->code, 200, "Test4 (bad domain) - Status 200");
-        is($tx->hops, 1, "Test5 (bad domain) - 1 hop");
-        is($tx->req->url->path, '/echo',
-            "Test5 (bad domain) - request path OK");
-        unlike($tx->res->body, qr/testevil/,
-            "Test5 (bad domain) - bad cookie absent");
+        is($tx->res->code, 200, "Test5 (bad cookie domains) - Status 200");
+        is($tx->hops, 1, "Test5 - 1 hop");
+        is($tx->req->url->path, '/echo', "Test5 - request path OK");
+        unlike($tx->res->body, qr/testevil/, "Test5 - bad cookie absent");
     }
 );
 
@@ -237,11 +229,27 @@ $ua->get(
     sub {
         my ($ua_r, $tx) = @_;
 
-        is($tx->res->code, 200, "Test4 (bad domain) - Status 200");
-        unlike($tx->res->body, qr/testevil/,
-            "Test5 (bad domain) - bad cookie absent");
+        is($tx->res->code, 200, "Test5 - Status 200");
+        unlike($tx->res->body, qr/testevil/, "Test5 - bad cookie absent");
     }
 );
 
 $ua->run_all;
 
+$ua->get(
+    'http://www.foo.notreal.com/twolevelsup/',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code, 200,
+            "Test6 (cookie domain two levels up) - Status 200");
+        is($tx->hops, 1, "Test6 - 1 hop");
+        is( $tx->req->url,
+            'http://www.foo.notreal.com/echo',
+            "Test6 - request url OK"
+        );
+        unlike($tx->res->body, qr/testevil/, "Test6 - bad cookie absent");
+    }
+);
+
+$ua->run_all;

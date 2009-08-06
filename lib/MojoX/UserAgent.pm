@@ -212,8 +212,16 @@ sub scrub_cookies {
         if ($cookie->domain) {
             # TODO: check that domain value matches request url;
             my $domain = $cookie->domain;
-            next unless (   $domain =~ m{\w+\.\w+$}x
-                         && $tx->req->url->host =~ m{\b$domain$}x);
+            my $host = $tx->req->url->host;
+            unless (   $domain =~ m{\w+\.\w+$}x
+                    && ($host =~ s/\.$domain$//x || $host =~ s/^$domain$//x)
+                    && $host !~ m{\.})
+            {
+                # Note that in theory we should add to this a refusal if
+                # the domain matches one of these:
+                # http://publicsuffix.org/list/
+                next;
+            }
         }
         else {
             $cookie->domain($tx->req->url->host);
