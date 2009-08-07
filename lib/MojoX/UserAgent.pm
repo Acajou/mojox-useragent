@@ -14,6 +14,8 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
+our $VERSION = '0.001';
+
 __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('follow_redirects', default => 1);
 
@@ -33,6 +35,9 @@ __PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
 __PACKAGE__->attr('cookie_jar',
     default => sub { MojoX::UserAgent::CookieJar->new });
 
+__PACKAGE__->attr('agent',
+    default => "Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)");
+
 __PACKAGE__->attr(
     'default_done_cb',
     default => sub {
@@ -46,11 +51,9 @@ __PACKAGE__->attr(
 
 __PACKAGE__->attr('app');
 
-our $VERSION = '0.001';
-
 sub new {
     my $self = shift->SUPER::new();
-    # $self->{_client} = Mojo::Client->new;
+    $self->_client->keep_alive_timeout(30);
     return $self;
 }
 

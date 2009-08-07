@@ -52,14 +52,19 @@ sub new {
 }
 
 sub client_connect {
-    my $self = shift->SUPER::client_connect();
+    my $self = shift;
 
     # Add cookies
     my $cookies = $self->ua->cookies_for_url($self->req->url);
-
     # What if req already had some cookies?
     $self->req->cookies(@{$cookies});
 
+    unless ($self->req->headers->user_agent) {
+        my $ua = $self->ua->agent;
+        $self->req->headers->user_agent($ua) if $ua;
+    }
+
+    $self->SUPER::client_connect();
     return $self;
 }
 1;

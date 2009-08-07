@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 32;
+plan tests => 35;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -21,7 +21,25 @@ my $ua = MojoX::UserAgent->new;
     sub handler {
         my ($self, $tx) = @_;
 
-        if ($tx->req->url->path =~ m{^/set}) {
+        if ($tx->req->url->path =~ m{^/echo}) {
+
+            my $cookies = $tx->req->cookies;
+
+            my $body = "xyz\n";
+            for my $cookie (@{$cookies}) {
+                $body .= $cookie->to_string . "\n";
+
+            }
+            if (my $ua = $tx->req->headers->user_agent) {
+                $body .= "User-Agent: $ua\n";
+            }
+            $tx->res->code(200);
+            $tx->res->headers->content_type('text/plain');
+
+            $tx->res->body($body);
+
+        }
+        elsif ($tx->req->url->path =~ m{^/set}) {
 
             my $cookie = Mojo::Cookie::Response->new;
             $cookie->name('testcookie');
@@ -33,21 +51,6 @@ my $ua = MojoX::UserAgent->new;
             $tx->res->code(302);
             $tx->res->headers->set_cookie($cookie);
             $tx->res->headers->location($url);
-        }
-        elsif ($tx->req->url->path =~ m{^/echo}) {
-
-            my $cookies = $tx->req->cookies;
-
-            my $body = "xyz";
-            for my $cookie (@{$cookies}) {
-                $body .= $cookie->to_string . "\n";
-
-            }
-            $tx->res->code(200);
-            $tx->res->headers->content_type('text/plain');
-
-            $tx->res->body($body);
-
         }
         elsif ($tx->req->url->path =~ m{^/unset}) {
 
@@ -151,6 +154,9 @@ $ua->get(
         is($tx->res->headers->content_type,
             'text/plain', "Test1 - content-type OK");
         like($tx->res->body, qr/testcookie=1969/, "Test1 - cookie OK");
+        like($tx->res->body,
+            qr{User-Agent:.*MojoX::UserAgent/$MojoX::UserAgent::VERSION},
+            "Test1 - user-agent found");
     }
 );
 
@@ -249,6 +255,20 @@ $ua->get(
             "Test6 - request url OK"
         );
         unlike($tx->res->body, qr/testevil/, "Test6 - bad cookie absent");
+    }
+);
+
+$ua->run_all;
+
+$ua->agent("007");
+$ua->get(
+    'http://www.notreal.com/echo/',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code,      200,     "Test7 (custom UA string) - Status 200");
+        like($tx->res->body, qr/User-Agent:.*007/,
+            "Test7 - user-agent string OK");
     }
 );
 
