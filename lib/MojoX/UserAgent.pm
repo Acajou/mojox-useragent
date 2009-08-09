@@ -20,18 +20,15 @@ __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('follow_redirects', default => 1);
 
 # pipeline_method: 0 -> Don't Pipeline
-#                  1 -> Pipeline Vertically
-#                  2 -> Pipeline Horizontally
-# (could even allow per-tx setting)
+#                  1 -> Pipeline Vertically (coming soon)
+#                  2 -> Pipeline Horizontally (coming soon)
 __PACKAGE__->attr('pipeline_method', default => 0);
 
-__PACKAGE__->attr('maxconnections', default => 2);
-__PACKAGE__->attr('maxpipereqs', default => 5);
+__PACKAGE__->attr('maxconnections', default => 5); # coming soon
+__PACKAGE__->attr('maxpipereqs', default => 5); # coming soon
 
 __PACKAGE__->attr('validate_cookie_paths', default => 0);
 
-__PACKAGE__->attr('_tx_count', default => 0);
-__PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
 __PACKAGE__->attr('cookie_jar',
     default => sub { MojoX::UserAgent::CookieJar->new });
 
@@ -49,6 +46,14 @@ __PACKAGE__->attr(
     }
 );
 
+__PACKAGE__->attr('_count', default => 0);
+
+__PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
+
+__PACKAGE__->attr('_active',  default => sub { {} });
+__PACKAGE__->attr('_ondeck',  default => sub { {} });
+
+
 __PACKAGE__->attr('app');
 
 sub new {
@@ -61,8 +66,16 @@ sub spool_txs {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
-        # Fixup (TODO) 
-        push @{$self->{_txs}}, $tx;
+        my ($scheme, $host, $port) = $tx->client_info;
+
+        my $id = "$host:$port";
+        if (my $ondeck = $self->_ondeck->{$id}) {
+            push @{$ondeck}, $tx;
+        }
+        else {
+            $self->_ondeck->{$id} = [$tx];
+            $self->_active->{$id} = [];
+        }
     }
 }
 
@@ -77,29 +90,43 @@ sub get {
             ua       => $self
         }
     );
-    push @{$self->{_txs}}, $tx;
+    $self->spool_txs($tx);
 }
 
 sub run_all {
     my $self = shift;
 
     while (1) {
-        last unless $self->crank;
+        last unless $self->crank_all;
     }
 }
 
-sub crank {
+sub crank_all {
     my $self = shift;
 
-    $self->app ? $self->_spin_app : $self->_spin;
+    my $active_count = 0;
+    for my $id (keys %{$self->_active}) {
+        $active_count += $self->crank_dest($id);
+    }
+    return $active_count;
+}
 
-    my $transactions = $self->{_txs};
+sub crank_dest {
+    my $self = shift;
+    my $dest = shift;
+
+    my $txs = $self->update_active($dest);
+
+    return 0 unless (@{$txs}); # nothing currently active for this host:port
+
+    $self->app ? $self->_spin_app($txs) : $self->_spin($txs);
+
     my @buffer;
-    while (my $tx = shift @{$transactions}) {
+    while (my $tx = shift @{$txs}) {
 
         if ($tx->is_finished) {
 
-            $self->{_tx_count}++;
+            $self->{_count}++;
 
             # Check for cookies
             $self->extract_cookies($tx);
@@ -162,18 +189,42 @@ sub crank {
             push @buffer, $tx;
         }
     }
-    push @{$transactions}, @buffer;
-    return scalar @{$transactions};
+
+    # Put those not finished back into the active array for this host:port
+    push @{$txs}, @buffer;
+
+    return scalar @{$txs};
+}
+
+sub update_active {
+    my $self = shift;
+    my $dest = shift;
+
+    # Right now just copy from _ondeck to _active without any limitations
+
+    my $ondeck = $self->_ondeck->{$dest};
+    my $active = $self->_active->{$dest};
+
+    if ($ondeck && @{$ondeck}) {
+        push @{$active}, @{$ondeck};
+        @{$ondeck} = ();
+    }
+
+    return $active;
 }
 
 sub _spin {
     my $self = shift;
-    $self->_client->spin(@{$self->{_txs}});
+    my $txs = shift;
+
+    $self->_client->spin(@{$txs});
 }
 sub _spin_app {
     my $self = shift;
+    my $txs = shift;
+
     #can only spin one so pick at random
-    my $tx = $self->{_txs}->[int(rand(scalar @{$self->{_txs}}))];
+    my $tx = $txs->[int(rand(scalar @{$txs}))];
     $self->_client->spin_app($self->{app}, $tx);
 }
 
