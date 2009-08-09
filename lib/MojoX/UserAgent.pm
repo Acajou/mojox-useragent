@@ -227,7 +227,14 @@ sub update_active {
     my $ondeck = $self->_ondeck->{$dest};
     my $active = $self->_active->{$dest};
 
-    if ($ondeck && @{$ondeck}) {
+    if (!@{$active} && !@{$ondeck}) {
+        # nothing active or ondeck for this host/port: delete hash entries
+        delete $self->_ondeck->{$dest};
+        delete $self->_active->{$dest};
+        return [];
+    }
+
+    if (@{$ondeck}) {
         push @{$active}, @{$ondeck};
         @{$ondeck} = ();
     }
