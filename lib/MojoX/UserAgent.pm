@@ -62,43 +62,26 @@ sub new {
     return $self;
 }
 
-sub spool_txs {
+sub cookies_for_url {
     my $self = shift;
-    my $new_transactions = [@_];
-    for my $tx (@{$new_transactions}) {
-        my ($scheme, $host, $port) = $tx->client_info;
 
-        my $id = "$host:$port";
-        if (my $ondeck = $self->_ondeck->{$id}) {
-            push @{$ondeck}, $tx;
-        }
-        else {
-            $self->_ondeck->{$id} = [$tx];
-            $self->_active->{$id} = [];
-        }
+    my $resp_cookies = $self->cookie_jar->cookies_for_url(@_);
+
+    return [] unless @{$resp_cookies};
+
+    # now make request cookies
+    my @req_cookies = ();
+    for my $rc (@{$resp_cookies}) {
+          my $cookie = Mojo::Cookie::Request->new;
+          $cookie->name($rc->name);
+          $cookie->value($rc->value);
+          $cookie->path($rc->path);
+          $cookie->version($rc->version) if defined $rc->version;
+
+          push @req_cookies, $cookie;
     }
-}
 
-sub get {
-    my $self = shift;
-    my $url = shift;
-    my $cb = shift || $self->default_done_cb;
-
-    my $tx = MojoX::UserAgent::Transaction->new(
-        {   url      => $url,
-            callback => $cb,
-            ua       => $self
-        }
-    );
-    $self->spool_txs($tx);
-}
-
-sub run_all {
-    my $self = shift;
-
-    while (1) {
-        last unless $self->crank_all;
-    }
+    return [@req_cookies];
 }
 
 sub crank_all {
@@ -129,7 +112,7 @@ sub crank_dest {
             $self->{_count}++;
 
             # Check for cookies
-            $self->extract_cookies($tx);
+            $self->_extract_cookies($tx);
 
             # Check for redirect
             if ($tx->res->is_status_class(300)
@@ -196,6 +179,45 @@ sub crank_dest {
     return scalar @{$txs};
 }
 
+sub get {
+    my $self = shift;
+    my $url = shift;
+    my $cb = shift || $self->default_done_cb;
+
+    my $tx = MojoX::UserAgent::Transaction->new(
+        {   url      => $url,
+            callback => $cb,
+            ua       => $self
+        }
+    );
+    $self->spool_txs($tx);
+}
+
+sub run_all {
+    my $self = shift;
+
+    while (1) {
+        last unless $self->crank_all;
+    }
+}
+
+sub spool_txs {
+    my $self = shift;
+    my $new_transactions = [@_];
+    for my $tx (@{$new_transactions}) {
+        my ($scheme, $host, $port) = $tx->client_info;
+
+        my $id = "$host:$port";
+        if (my $ondeck = $self->_ondeck->{$id}) {
+            push @{$ondeck}, $tx;
+        }
+        else {
+            $self->_ondeck->{$id} = [$tx];
+            $self->_active->{$id} = [];
+        }
+    }
+}
+
 sub update_active {
     my $self = shift;
     my $dest = shift;
@@ -213,28 +235,13 @@ sub update_active {
     return $active;
 }
 
-sub _spin {
-    my $self = shift;
-    my $txs = shift;
-
-    $self->_client->spin(@{$txs});
-}
-sub _spin_app {
-    my $self = shift;
-    my $txs = shift;
-
-    #can only spin one so pick at random
-    my $tx = $txs->[int(rand(scalar @{$txs}))];
-    $self->_client->spin_app($self->{app}, $tx);
-}
-
-sub extract_cookies {
+sub _extract_cookies {
     my ($self, $tx) = @_;
 
     my $cookies = $tx->res->cookies;
 
     if (@{$cookies}) {
-        my @cleared = $self->scrub_cookies($tx, @{$cookies});
+        my @cleared = $self->_scrub_cookies($tx, @{$cookies});
         $self->cookie_jar->store(@cleared) if @cleared;
     }
 
@@ -242,7 +249,7 @@ sub extract_cookies {
     1;
 }
 
-sub scrub_cookies {
+sub _scrub_cookies {
     my $self = shift;
     my $tx = shift;
 
@@ -300,27 +307,21 @@ sub scrub_cookies {
     return @cleared;
 }
 
-sub cookies_for_url {
+sub _spin {
     my $self = shift;
+    my $txs = shift;
 
-    my $resp_cookies = $self->cookie_jar->cookies_for_url(@_);
-
-    return [] unless @{$resp_cookies};
-
-    # now make request cookies
-    my @req_cookies = ();
-    for my $rc (@{$resp_cookies}) {
-          my $cookie = Mojo::Cookie::Request->new;
-          $cookie->name($rc->name);
-          $cookie->value($rc->value);
-          $cookie->path($rc->path);
-          $cookie->version($rc->version) if defined $rc->version;
-
-          push @req_cookies, $cookie;
-    }
-
-    return [@req_cookies];
+    $self->_client->spin(@{$txs});
 }
+sub _spin_app {
+    my $self = shift;
+    my $txs = shift;
+
+    #can only spin one so pick at random
+    my $tx = $txs->[int(rand(scalar @{$txs}))];
+    $self->_client->spin_app($self->{app}, $tx);
+}
+
 
 1;
 __END__
