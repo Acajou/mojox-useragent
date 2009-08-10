@@ -24,9 +24,6 @@ __PACKAGE__->attr('follow_redirects', default => 1);
 #                  2 -> Pipeline Horizontally (coming soon)
 __PACKAGE__->attr('pipeline_method', default => 0);
 
-__PACKAGE__->attr('maxconnections', default => 5);
-__PACKAGE__->attr('maxpipereqs', default => 5); # coming soon
-
 __PACKAGE__->attr('validate_cookie_paths', default => 0);
 
 __PACKAGE__->attr('cookie_jar',
@@ -49,6 +46,9 @@ __PACKAGE__->attr(
 __PACKAGE__->attr('_count', default => 0);
 
 __PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
+
+__PACKAGE__->attr('_maxconnections', default => 5);
+__PACKAGE__->attr('_maxpipereqs', default => 5);
 
 __PACKAGE__->attr('_active',  default => sub { {} });
 __PACKAGE__->attr('_ondeck',  default => sub { {} });
@@ -177,9 +177,6 @@ sub crank_dest {
     # Put those not finished back into the active array for this host:port
     push @{$txs}, @buffer;
 
-    # Keep the active queue up to date
-    $txs = $self->_update_active($dest);
-
     return scalar @{$txs};
 }
 
@@ -197,11 +194,41 @@ sub get {
     $self->spool_txs($tx);
 }
 
+sub is_idle {
+    my $self = shift;
+
+    return !((scalar keys %{$self->_active})
+             || (scalar keys %{$self->_ondeck}));
+}
+
+sub maxconnections {
+    my $self = shift;
+    my $value = shift;
+
+    return $self->_maxconnections unless $value;
+
+    $self->is_idle
+      ? return $self->_maxconnections($value)
+      : return $self->_maxconnections;
+}
+
+sub maxpipereqs {
+    my $self = shift;
+    my $value = shift;
+
+    return $self->_maxpipereqs unless $value;
+
+    $self->is_idle
+      ? return $self->_maxpipereqs($value)
+      : return $self->_maxpipereqs;
+}
+
 sub run_all {
     my $self = shift;
 
     while (1) {
-        last unless $self->crank_all;
+        $self->crank_all;
+        last if $self->is_idle;
     }
 }
 
