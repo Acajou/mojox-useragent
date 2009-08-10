@@ -14,7 +14,7 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
-our $VERSION = '0.001';
+our $VERSION = '0.01';
 
 __PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('follow_redirects', default => 1);
@@ -24,7 +24,7 @@ __PACKAGE__->attr('follow_redirects', default => 1);
 #                  2 -> Pipeline Horizontally (coming soon)
 __PACKAGE__->attr('pipeline_method', default => 0);
 
-__PACKAGE__->attr('maxconnections', default => 5); # coming soon
+__PACKAGE__->attr('maxconnections', default => 5);
 __PACKAGE__->attr('maxpipereqs', default => 5); # coming soon
 
 __PACKAGE__->attr('validate_cookie_paths', default => 0);
@@ -98,7 +98,8 @@ sub crank_dest {
     my $self = shift;
     my $dest = shift;
 
-    my $txs = $self->update_active($dest);
+    # Update the active queue
+    my $txs = $self->_update_active($dest);
 
     return 0 unless (@{$txs}); # nothing currently active for this host:port
 
@@ -176,6 +177,9 @@ sub crank_dest {
     # Put those not finished back into the active array for this host:port
     push @{$txs}, @buffer;
 
+    # Keep the active queue up to date
+    $txs = $self->_update_active($dest);
+
     return scalar @{$txs};
 }
 
@@ -216,30 +220,6 @@ sub spool_txs {
             $self->_active->{$id} = [];
         }
     }
-}
-
-sub update_active {
-    my $self = shift;
-    my $dest = shift;
-
-    # Right now just copy from _ondeck to _active without any limitations
-
-    my $ondeck = $self->_ondeck->{$dest};
-    my $active = $self->_active->{$dest};
-
-    if (!@{$active} && !@{$ondeck}) {
-        # nothing active or ondeck for this host/port: delete hash entries
-        delete $self->_ondeck->{$dest};
-        delete $self->_active->{$dest};
-        return [];
-    }
-
-    if (@{$ondeck}) {
-        push @{$active}, @{$ondeck};
-        @{$ondeck} = ();
-    }
-
-    return $active;
 }
 
 sub _extract_cookies {
@@ -327,6 +307,33 @@ sub _spin_app {
     #can only spin one so pick at random
     my $tx = $txs->[int(rand(scalar @{$txs}))];
     $self->_client->spin_app($self->{app}, $tx);
+}
+
+sub _update_active {
+    my $self = shift;
+    my $dest = shift;
+
+    my $ondeck = $self->_ondeck->{$dest};
+    my $active = $self->_active->{$dest};
+
+    my $on_count = scalar @{$ondeck};
+    my $act_count = scalar @{$active};
+
+    if (!$act_count && !$on_count) {
+        # nothing active or ondeck for this host/port: delete hash entries
+        delete $self->_ondeck->{$dest};
+        delete $self->_active->{$dest};
+        return [];
+    }
+
+    if (@{$ondeck} && $act_count < $self->maxconnections) {
+        my $allow = $self->maxconnections - $act_count;
+        for (my $i=0; $i<$allow && @{$ondeck}; $i++) {
+            push @{$active}, (shift @{$ondeck});
+        }
+    }
+
+    return $active;
 }
 
 

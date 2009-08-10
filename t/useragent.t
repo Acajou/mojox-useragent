@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 35;
+plan tests => 39;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -136,6 +136,7 @@ my $ua = MojoX::UserAgent->new;
     }
 }
 
+
 my $app = CookieTest->new;
 isa_ok($app, "Mojo::HelloWorld");
 
@@ -162,6 +163,7 @@ $ua->get(
 
 $ua->run_all;
 
+
 $ua->app($app);
 
 $ua->get(
@@ -182,6 +184,7 @@ $ua->get(
 
 $ua->run_all;
 
+
 $ua->get(
     'http://www.notreal.com/loop/0',
     sub {
@@ -198,6 +201,7 @@ $ua->get(
 );
 
 $ua->run_all;
+
 
 $ua->get(
     'http://www.notreal.com/multi/',
@@ -242,6 +246,7 @@ $ua->get(
 
 $ua->run_all;
 
+
 $ua->get(
     'http://www.foo.notreal.com/twolevelsup/',
     sub {
@@ -260,6 +265,7 @@ $ua->get(
 
 $ua->run_all;
 
+
 $ua->agent("007");
 $ua->get(
     'http://www.notreal.com/echo/',
@@ -273,3 +279,36 @@ $ua->get(
 );
 
 $ua->run_all;
+
+
+$ua->maxconnections(2);
+$ua->get(
+    'http://www.notreal.com/echo/0',
+    sub {
+        my ($ua_r, $tx) = @_;
+    }
+);
+$ua->get(
+    'http://www.notreal.com/echo/1',
+    sub {
+        my ($ua_r, $tx) = @_;
+    }
+);
+$ua->get(
+    'http://www.notreal.com/echo/3',
+    sub {
+        my ($ua_r, $tx) = @_;
+    }
+);
+
+is(scalar @{$ua->_ondeck->{"www.notreal.com:80"}},
+    3, "Test 8 (maxconnections) - 3 txs on deck");
+is(scalar @{$ua->_active->{"www.notreal.com:80"}}, 0, "Test 8 - 0 active txs");
+
+$ua->crank_all;
+
+is(scalar @{$ua->_ondeck->{"www.notreal.com:80"}}, 1, "Test 8 - 1 tx on deck");
+is(scalar @{$ua->_active->{"www.notreal.com:80"}}, 2, "Test 8 - 2 txs active");
+
+$ua->run_all;
+
