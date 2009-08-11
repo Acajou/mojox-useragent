@@ -21,10 +21,8 @@ our $VERSION = '0.01';
 __PACKAGE__->attr('follow_redirects' => 1);
 __PACKAGE__->attr('redirect_limit' => 10);
 
-# pipeline_method: 0 -> Don't Pipeline
-#                  1 -> Pipeline Horizontally (coming soon)
-#                  2 -> Pipeline Vertically (coming soon)
-__PACKAGE__->attr('pipeline_method' => 0);
+# pipeline_method: 'none' / 'horizontal' / 'vertical'
+__PACKAGE__->attr('pipeline_method' => 'none');
 
 __PACKAGE__->attr('validate_cookie_paths' => 0);
 
@@ -63,9 +61,9 @@ sub _pipe_v();
 
 __PACKAGE__->attr(
     '_pipe_methods' => sub {
-        {   '0' => \&_pipe_no,
-            '1' => \&_pipe_h,
-            '2' => \&_pipe_v,
+        {   'none' => \&_pipe_no,
+            'horizontal' => \&_pipe_h,
+            'vertical' => \&_pipe_v,
         };
     }
 );
@@ -122,9 +120,21 @@ sub crank_dest {
     my @still_active;
     my @finished;
     while (my $tx = shift @{$active}) {
-        $tx->is_finished
-          ? push @finished, $tx
-          : push @still_active, $tx;
+        if ($tx->is_finished) {
+
+            # if it's a pipeline, we must unpack
+            if (ref $tx eq 'Mojo::Pipeline') {
+                for my $inner (@{$tx->transactions}) {
+                    push @finished, $inner;
+                }
+            }
+            else {
+                push @finished, $tx;
+            }
+        }
+        else {
+            push @still_active, $tx;
+        }
     }
 
     for my $tx (@finished) {
@@ -291,7 +301,7 @@ sub _pipe_h() {
 
     while ($queued < $queue_max && @{$ondeck}) {
 
-        @stage[$i] = [] unless @stage[$i];
+        $stage[$i] = [] unless $stage[$i];
 
         $stage[$i][$j] = shift @{$ondeck};
         $queued++;
