@@ -289,8 +289,8 @@ sub _extract_cookies {
     1;
 }
 
-sub _pipe_h() {
-    my ($self, $slots, $ondeck, $active) = @_;
+sub _pipe_h_or_v() {
+    my ($self, $h_or_v, $slots, $ondeck, $active) = @_;
 
     my $queue_max = $slots * $self->maxpipereqs;
 
@@ -306,10 +306,23 @@ sub _pipe_h() {
         $stage[$i]->[$j] = shift @{$ondeck};
         $queued++;
 
-        $i++;
-        if ($i == $slots) {
-            $i=0;
+        if ($h_or_v) {
+
+            # Vertical
             $j++;
+            if ($j == $self->maxpipereqs) {
+                $j = 0;
+                $i++;
+            }
+        }
+        else {
+
+            # Horizontal
+            $i++;
+            if ($i == $slots) {
+                $i = 0;
+                $j++;
+            }
         }
     }
 
@@ -326,6 +339,13 @@ sub _pipe_h() {
     }
 }
 
+sub _pipe_h() {
+    my $self= shift;
+
+    $self->_pipe_h_or_v(0, @_);
+
+}
+
 sub _pipe_no() {
     my ($self, $slots, $ondeck, $active) = @_;
 
@@ -334,6 +354,13 @@ sub _pipe_no() {
         push @{$active}, (shift @{$ondeck});
         $i++;
     }
+}
+
+sub _pipe_v() {
+    my $self= shift;
+
+    $self->_pipe_h_or_v(1, @_);
+
 }
 
 sub _scrub_cookies {
