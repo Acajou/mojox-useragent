@@ -16,7 +16,7 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
-our $VERSION = '0.01';
+our $VERSION = '0.1';
 
 __PACKAGE__->attr('follow_redirects' => 1);
 __PACKAGE__->attr('redirect_limit' => 10);
