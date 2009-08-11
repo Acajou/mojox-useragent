@@ -114,85 +114,87 @@ sub crank_dest {
     my $dest = shift;
 
     # Update the active queue
-    my $txs = $self->_update_active($dest);
+    my $active = $self->_update_active($dest);
 
-    return 0 unless (@{$txs}); # nothing currently active for this host:port
+    return 0 unless (@{$active}); # nothing currently active for this host:port
 
-    $self->app ? $self->_spin_app($txs) : $self->_spin($txs);
+    $self->app ? $self->_spin_app($active) : $self->_spin($active);
 
-    my @buffer;
-    while (my $tx = shift @{$txs}) {
+    my @still_active;
+    my @finished;
+    while (my $tx = shift @{$active}) {
+        $tx->is_finished
+          ? push @finished, $tx
+          : push @still_active, $tx;
+    }
 
-        if ($tx->is_finished) {
+    for my $tx (@finished) {
 
-            $self->{_count}++;
+        # TODO: need to check for tx errors here!
+        $self->{_count}++;
 
-            # Check for cookies
-            $self->_extract_cookies($tx);
+        # Check for cookies
+        $self->_extract_cookies($tx);
 
-            # Check for redirect
-            if ($tx->res->is_status_class(300)
-                && $self->follow_redirects
-                && $tx->hops < $self->redirect_limit
-                && (my $location = $tx->res->headers->header('Location')))
-            {
+        # Check for redirect
+        if (   $tx->res->is_status_class(300)
+            && $self->follow_redirects
+            && $tx->hops < $self->redirect_limit
+            && (my $location = $tx->res->headers->header('Location')))
+        {
 
-                # Presumably 304 (not modified) shouldn't include
-                # a Location so shouldn't come in here...
+            # Presumably 304 (not modified) shouldn't include
+            # a Location so shouldn't come in here...
 
-                unless ($tx->res->code == 305) {
+            unless ($tx->res->code == 305) {
 
-                    # Give priority to the new URL where it gives info,
-                    # otherwise, keep elements of the old URL...
-                    my $newu = Mojo::URL->new();
-                    $newu->parse($location);
-                    my $oldu = $tx->req->url;
+                # Give priority to the new URL where it gives info,
+                # otherwise, keep elements of the old URL...
+                my $newu = Mojo::URL->new();
+                $newu->parse($location);
+                my $oldu = $tx->req->url;
 
-                    $newu->scheme($oldu->scheme)       unless $newu->is_abs;
-                    $newu->authority($oldu->authority) unless $newu->is_abs;
+                $newu->scheme($oldu->scheme)       unless $newu->is_abs;
+                $newu->authority($oldu->authority) unless $newu->is_abs;
 
-                    $newu->path($oldu->path)     unless $newu->path;
-                    $newu->path($oldu->query)    unless $newu->query;
-                    $newu->path($oldu->fragment) unless $newu->fragment;
+                $newu->path($oldu->path)     unless $newu->path;
+                $newu->path($oldu->query)    unless $newu->query;
+                $newu->path($oldu->fragment) unless $newu->fragment;
 
-                    # Note should check res->code to see if we should
-                    # re-use the req->method...
-                    my $new_tx = MojoX::UserAgent::Transaction->new(
-                        {   url          => $newu,
-                            method       => $tx->req->method,
-                            hops         => $tx->hops + 1,
-                            callback     => $tx->done_cb,
-                            ua           => $self,
-                            original_req => (
-                                  $tx->original_req
-                                ? $tx->original_req
-                                : $tx->req
-                            )
-                        }
-                    );
-                    $self->spool_txs($new_tx);
-                }
-                else {
-
-                    # Set up a proxied request (TODO)
-                     croak('Proxy support not yet implemented');
-                }
+                # Note should check res->code to see if we should
+                # re-use the req->method...
+                my $new_tx = MojoX::UserAgent::Transaction->new(
+                    {   url          => $newu,
+                        method       => $tx->req->method,
+                        hops         => $tx->hops + 1,
+                        callback     => $tx->done_cb,
+                        ua           => $self,
+                        original_req => (
+                              $tx->original_req
+                            ? $tx->original_req
+                            : $tx->req
+                        )
+                    }
+                );
+                $self->spool_txs($new_tx);
             }
             else {
 
-                # Invoke Callback
-                $tx->done_cb->($self, $tx);
+                # Set up a proxied request (TODO)
+                croak('Proxy support not yet implemented');
             }
         }
         else {
-            push @buffer, $tx;
+
+            # Invoke Callback
+            $tx->done_cb->($self, $tx);
         }
     }
 
     # Put those not finished back into the active array for this host:port
-    push @{$txs}, @buffer;
+    push @{$active}, @still_active;
 
-    return scalar @{$txs};
+    return scalar @{$active};
 }
 
 sub get {
@@ -276,6 +278,43 @@ sub _extract_cookies {
 
 
     1;
+}
+
+sub _pipe_h() {
+    my ($self, $slots, $ondeck, $active) = @_;
+
+    my $queue_max = $slots * $self->maxpipereqs;
+
+    my @stage;
+    my $i=0;
+    my $j=0;
+    my $queued=0;
+
+    while ($queued < $queue_max && @{$ondeck}) {
+
+        @stage[$i] = [] unless @stage[$i];
+
+        $stage[$i][$j] = shift @{$ondeck};
+        $queued++;
+
+        $i++;
+        if ($i == $slots) {
+            $i=0;
+            $j++;
+        }
+    }
+
+    foreach my $slot (@stage) {
+        if (scalar @{$slot} == 1) {
+            push @{$active}, $slot->[0];
+        }
+        else {
+            my $size = @{$slot};
+            warn "Creating a $size request pipeline";
+            my $pipe = Mojo::Pipeline->new(@{$slot});
+            push @{$active}, $pipe;
+        }
+    }
 }
 
 sub _pipe_no() {
