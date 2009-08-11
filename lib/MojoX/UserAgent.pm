@@ -61,9 +61,9 @@ sub _pipe_v();
 
 __PACKAGE__->attr(
     '_pipe_methods' => sub {
-        {   'none' => \&_pipe_no,
+        {   'none'       => \&_pipe_no,
             'horizontal' => \&_pipe_h,
-            'vertical' => \&_pipe_v,
+            'vertical'   => \&_pipe_v,
         };
     }
 );
@@ -303,7 +303,7 @@ sub _pipe_h() {
 
         $stage[$i] = [] unless $stage[$i];
 
-        $stage[$i][$j] = shift @{$ondeck};
+        $stage[$i]->[$j] = shift @{$ondeck};
         $queued++;
 
         $i++;

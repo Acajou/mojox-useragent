@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 8;
+plan tests => 14;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -52,3 +52,31 @@ is (scalar @{$slots->[1]->transactions}, 3);
 is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 7);
 
 $ua->run_all;
+
+$slots = $ua->_active->{'lh3.ggpht.com:80'};
+is ($slots, undef);
+
+@urls =
+  ( 'http://lh4.ggpht.com/_bvKfYeSTo5U/SnSC17xJJyI/AAAAAAAAGQs/Z_aRDN6So0U/s640/Eileens%20vase.jpg',
+    'http://lh4.ggpht.com/_9UOrGPMWZ4o/SW3ML4d7pcI/AAAAAAAALTM/gFidELjRGSE/s640/DSC07800%20copy.JPG',
+    'http://lh4.ggpht.com/_ojqv06j4HLU/SnqFEIt4OpI/AAAAAAAAecc/KbSWJ6Vw94I/s800/20090805-_MG_9289.jpg'
+   );
+
+for my $url (@urls) {
+    $ua->get($url);
+}
+
+$ua->crank_all;
+
+# Peekaboo
+$slots = $ua->_active->{'lh4.ggpht.com:80'};
+is (scalar @{$slots}, 2);
+is (ref $slots->[0], 'Mojo::Pipeline');
+is (ref $slots->[1], 'MojoX::UserAgent::Transaction');
+
+is (scalar @{$slots->[0]->transactions}, 2);
+
+is (scalar @{$ua->_ondeck->{'lh4.ggpht.com:80'}}, 0);
+
+$ua->run_all;
+
