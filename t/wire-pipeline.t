@@ -6,11 +6,11 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 14;
+plan tests => 30;
 
 my $ua = MojoX::UserAgent->new;
 
-my @urls =
+my @urls1 =
   ( 'http://lh3.ggpht.com/_bvKfYeSTo5U/SnSC17xJJyI/AAAAAAAAGQs/Z_aRDN6So0U/s640/Eileens%20vase.jpg',
     'http://lh3.ggpht.com/_9UOrGPMWZ4o/SW3ML4d7pcI/AAAAAAAALTM/gFidELjRGSE/s640/DSC07800%20copy.JPG',
     'http://lh3.ggpht.com/_ojqv06j4HLU/SnqFEIt4OpI/AAAAAAAAecc/KbSWJ6Vw94I/s800/20090805-_MG_9289.jpg',
@@ -34,11 +34,13 @@ $ua->pipeline_method('horizontal');
 is($ua->maxconnections, 2);
 is($ua->maxpipereqs, 3);
 
-for my $url (@urls) {
+for my $url (@urls1) {
     $ua->get($url);
 }
 
-$ua->crank_all;
+my $act_count = $ua->crank_all;
+
+is ($act_count, 2);
 
 # Peekaboo
 my $slots = $ua->_active->{'lh3.ggpht.com:80'};
@@ -56,17 +58,19 @@ $ua->run_all;
 $slots = $ua->_active->{'lh3.ggpht.com:80'};
 is ($slots, undef);
 
-@urls =
+my @urls2 =
   ( 'http://lh4.ggpht.com/_bvKfYeSTo5U/SnSC17xJJyI/AAAAAAAAGQs/Z_aRDN6So0U/s640/Eileens%20vase.jpg',
     'http://lh4.ggpht.com/_9UOrGPMWZ4o/SW3ML4d7pcI/AAAAAAAALTM/gFidELjRGSE/s640/DSC07800%20copy.JPG',
     'http://lh4.ggpht.com/_ojqv06j4HLU/SnqFEIt4OpI/AAAAAAAAecc/KbSWJ6Vw94I/s800/20090805-_MG_9289.jpg'
    );
 
-for my $url (@urls) {
+for my $url (@urls2) {
     $ua->get($url);
 }
 
-$ua->crank_all;
+$act_count = $ua->crank_all;
+
+is ($act_count, 2);
 
 # Peekaboo
 $slots = $ua->_active->{'lh4.ggpht.com:80'};
@@ -77,6 +81,61 @@ is (ref $slots->[1], 'MojoX::UserAgent::Transaction');
 is (scalar @{$slots->[0]->transactions}, 2);
 
 is (scalar @{$ua->_ondeck->{'lh4.ggpht.com:80'}}, 0);
+
+$ua->run_all;
+
+ok($ua->is_idle);
+
+
+# Play it safe
+$ua = MojoX::UserAgent->new;
+
+$ua->maxconnections(3);
+$ua->maxpipereqs(3);
+
+$ua->pipeline_method('vertical');
+
+
+my @urls3 =
+  ( 'http://lh5.ggpht.com/_bvKfYeSTo5U/SnSC17xJJyI/AAAAAAAAGQs/Z_aRDN6So0U/s640/Eileens%20vase.jpg',
+    'http://lh5.ggpht.com/_9UOrGPMWZ4o/SW3ML4d7pcI/AAAAAAAALTM/gFidELjRGSE/s640/DSC07800%20copy.JPG',
+    'http://lh5.ggpht.com/_ojqv06j4HLU/SnqFEIt4OpI/AAAAAAAAecc/KbSWJ6Vw94I/s800/20090805-_MG_9289.jpg'
+   );
+
+for my $url (@urls3) {
+    $ua->get($url);
+}
+
+$act_count = $ua->crank_all;
+
+is ($act_count, 1);
+# Peekaboo
+$slots = $ua->_active->{'lh5.ggpht.com:80'};
+is (scalar @{$slots}, 1);
+is (ref $slots->[0], 'Mojo::Pipeline');
+is (scalar @{$slots->[0]->transactions}, 3);
+
+$ua->run_all;
+
+for my $url (@urls1) {
+    $ua->get($url);
+}
+
+$act_count = $ua->crank_all;
+
+is ($act_count, 3);
+# Peekaboo
+my $slots = $ua->_active->{'lh3.ggpht.com:80'};
+is (scalar @{$slots}, 3);
+is (ref $slots->[0], 'Mojo::Pipeline');
+is (ref $slots->[1], 'Mojo::Pipeline');
+is (ref $slots->[2], 'Mojo::Pipeline');
+
+is (scalar @{$slots->[0]->transactions}, 3);
+is (scalar @{$slots->[1]->transactions}, 3);
+is (scalar @{$slots->[2]->transactions}, 3);
+
+is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 4);
 
 $ua->run_all;
 
