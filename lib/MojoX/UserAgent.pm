@@ -16,12 +16,12 @@ use MojoX::UserAgent::CookieJar;
 
 our $VERSION = '0.01';
 
-__PACKAGE__->attr('redirect_limit', default => 10);
 __PACKAGE__->attr('follow_redirects', default => 1);
+__PACKAGE__->attr('redirect_limit', default => 10);
 
 # pipeline_method: 0 -> Don't Pipeline
-#                  1 -> Pipeline Vertically (coming soon)
-#                  2 -> Pipeline Horizontally (coming soon)
+#                  1 -> Pipeline Horizontally (coming soon)
+#                  2 -> Pipeline Vertically (coming soon)
 __PACKAGE__->attr('pipeline_method', default => 0);
 
 __PACKAGE__->attr('validate_cookie_paths', default => 0);
@@ -55,6 +55,21 @@ __PACKAGE__->attr('_ondeck',  default => sub { {} });
 
 
 __PACKAGE__->attr('app');
+
+# Subroutine prototypes
+sub _pipe_no();
+sub _pipe_h();
+sub _pipe_v();
+
+__PACKAGE__->attr(
+    '_pipe_methods',
+    default => sub {
+        {   '0' => \&_pipe_no,
+            '1' => \&_pipe_h,
+            '2' => \&_pipe_v,
+        };
+    }
+);
 
 sub new {
     my $self = shift->SUPER::new();
@@ -197,8 +212,8 @@ sub get {
 sub is_idle {
     my $self = shift;
 
-    return !((scalar keys %{$self->_active})
-             || (scalar keys %{$self->_ondeck}));
+    return (!(scalar keys %{$self->_active})
+             && !(scalar keys %{$self->_ondeck}));
 }
 
 sub maxconnections {
@@ -261,6 +276,16 @@ sub _extract_cookies {
 
 
     1;
+}
+
+sub _pipe_no() {
+    my ($self, $slots, $ondeck, $active) = @_;
+
+    my $i=0;
+    while ($i<$slots && @{$ondeck}) {
+        push @{$active}, (shift @{$ondeck});
+        $i++;
+    }
 }
 
 sub _scrub_cookies {
@@ -354,10 +379,11 @@ sub _update_active {
     }
 
     if (@{$ondeck} && $act_count < $self->maxconnections) {
-        my $allow = $self->maxconnections - $act_count;
-        for (my $i=0; $i<$allow && @{$ondeck}; $i++) {
-            push @{$active}, (shift @{$ondeck});
-        }
+
+        # Use appropriate method to add to the active queue
+        my $slots = $self->maxconnections - $act_count;
+        $self->_pipe_methods->{$self->pipeline_method}
+          ->($self, $slots, $ondeck, $active);
     }
 
     return $active;
