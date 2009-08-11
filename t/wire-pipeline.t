@@ -125,7 +125,7 @@ $act_count = $ua->crank_all;
 
 is ($act_count, 3);
 # Peekaboo
-my $slots = $ua->_active->{'lh3.ggpht.com:80'};
+$slots = $ua->_active->{'lh3.ggpht.com:80'};
 is (scalar @{$slots}, 3);
 is (ref $slots->[0], 'Mojo::Pipeline');
 is (ref $slots->[1], 'Mojo::Pipeline');
