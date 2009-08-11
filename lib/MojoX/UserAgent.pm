@@ -7,6 +7,8 @@ use base 'Mojo::Base';
 
 use Carp 'croak';
 
+use Mojo 0.991247;
+
 use Mojo::URL;
 use Mojo::Pipeline;
 use Mojo::Client;
@@ -16,25 +18,23 @@ use MojoX::UserAgent::CookieJar;
 
 our $VERSION = '0.01';
 
-__PACKAGE__->attr('follow_redirects', default => 1);
-__PACKAGE__->attr('redirect_limit', default => 10);
+__PACKAGE__->attr('follow_redirects' => 1);
+__PACKAGE__->attr('redirect_limit' => 10);
 
 # pipeline_method: 0 -> Don't Pipeline
 #                  1 -> Pipeline Horizontally (coming soon)
 #                  2 -> Pipeline Vertically (coming soon)
-__PACKAGE__->attr('pipeline_method', default => 0);
+__PACKAGE__->attr('pipeline_method' => 0);
 
-__PACKAGE__->attr('validate_cookie_paths', default => 0);
+__PACKAGE__->attr('validate_cookie_paths' => 0);
 
-__PACKAGE__->attr('cookie_jar',
-    default => sub { MojoX::UserAgent::CookieJar->new });
-
-__PACKAGE__->attr('agent',
-    default => "Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)");
+__PACKAGE__->attr('cookie_jar' => sub { MojoX::UserAgent::CookieJar->new });
 
 __PACKAGE__->attr(
-    'default_done_cb',
-    default => sub {
+    'agent' => "Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)");
+
+__PACKAGE__->attr(
+    'default_done_cb' => sub {
         return sub {
             my ($self, $tx) = @_;
             my $url = $tx->hops ? $tx->original_req->url : $tx->req->url;
@@ -43,15 +43,15 @@ __PACKAGE__->attr(
     }
 );
 
-__PACKAGE__->attr('_count', default => 0);
+__PACKAGE__->attr('_count' => 0);
 
-__PACKAGE__->attr('_client',  default => sub { Mojo::Client->new });
+__PACKAGE__->attr('_client' => sub { Mojo::Client->new });
 
-__PACKAGE__->attr('_maxconnections', default => 5);
-__PACKAGE__->attr('_maxpipereqs', default => 5);
+__PACKAGE__->attr('_maxconnections' => 5);
+__PACKAGE__->attr('_maxpipereqs' => 5);
 
-__PACKAGE__->attr('_active',  default => sub { {} });
-__PACKAGE__->attr('_ondeck',  default => sub { {} });
+__PACKAGE__->attr('_active' => sub { {} });
+__PACKAGE__->attr('_ondeck' => sub { {} });
 
 
 __PACKAGE__->attr('app');
@@ -62,8 +62,7 @@ sub _pipe_h();
 sub _pipe_v();
 
 __PACKAGE__->attr(
-    '_pipe_methods',
-    default => sub {
+    '_pipe_methods' => sub {
         {   '0' => \&_pipe_no,
             '1' => \&_pipe_h,
             '2' => \&_pipe_v,

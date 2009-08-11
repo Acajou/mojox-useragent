@@ -8,7 +8,7 @@ use base 'Mojo::Transaction';
 
 use Carp 'croak';
 
-__PACKAGE__->attr('hops', default => 0);
+__PACKAGE__->attr('hops' => 0);
 __PACKAGE__->attr('done_cb');
 __PACKAGE__->attr('id');
 __PACKAGE__->attr('original_req');

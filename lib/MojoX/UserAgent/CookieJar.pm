@@ -8,8 +8,8 @@ use base 'Mojo::Base';
 
 use Carp 'croak';
 
-__PACKAGE__->attr('_jar', default => sub { {} });
-__PACKAGE__->attr('size', default => 0);
+__PACKAGE__->attr('_jar' => sub { {} });
+__PACKAGE__->attr('size' => 0);
 
 sub store {
     my $self = shift;
