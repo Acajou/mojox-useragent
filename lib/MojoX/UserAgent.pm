@@ -331,8 +331,6 @@ sub _pipe_h_or_v() {
             push @{$active}, $slot->[0];
         }
         else {
-            my $size = @{$slot};
-            warn "Creating a $size request pipeline";
             my $pipe = Mojo::Pipeline->new(@{$slot});
             push @{$active}, $pipe;
         }

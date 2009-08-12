@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 30;
+plan tests => 94;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -31,8 +31,17 @@ $ua->maxpipereqs(3);
 
 $ua->pipeline_method('horizontal');
 
-is($ua->maxconnections, 2);
-is($ua->maxpipereqs, 3);
+$ua->default_done_cb(
+    sub {
+        my ($ua, $tx) = @_;
+        is($tx->res->code, 200, "Status 200");
+        is($tx->res->headers->content_type, 'image/jpeg', "Got image");
+    }
+);
+
+
+is($ua->maxconnections, 2, "maxconnections set");
+is($ua->maxpipereqs, 3, "maxpipereqs set");
 
 for my $url (@urls1) {
     $ua->get($url);
@@ -40,23 +49,22 @@ for my $url (@urls1) {
 
 my $act_count = $ua->crank_all;
 
-is ($act_count, 2);
+is ($act_count, 2, "active count good");
 
 # Peekaboo
 my $slots = $ua->_active->{'lh3.ggpht.com:80'};
-is (scalar @{$slots}, 2);
-is (ref $slots->[0], 'Mojo::Pipeline');
-is (ref $slots->[1], 'Mojo::Pipeline');
+is (scalar @{$slots}, 2, "maxconnections respected");
+is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->transactions}, 3, "with 3 transactions");
+is (ref $slots->[1], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[1]->transactions}, 3, "with 3 transactions");
 
-is (scalar @{$slots->[0]->transactions}, 3);
-is (scalar @{$slots->[1]->transactions}, 3);
-
-is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 7);
+is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 7, "7 ondeck");
 
 $ua->run_all;
 
 $slots = $ua->_active->{'lh3.ggpht.com:80'};
-is ($slots, undef);
+is ($slots, undef, "nothing left");
 
 my @urls2 =
   ( 'http://lh4.ggpht.com/_bvKfYeSTo5U/SnSC17xJJyI/AAAAAAAAGQs/Z_aRDN6So0U/s640/Eileens%20vase.jpg',
@@ -70,21 +78,21 @@ for my $url (@urls2) {
 
 $act_count = $ua->crank_all;
 
-is ($act_count, 2);
+is ($act_count, 2, "active count good");
 
 # Peekaboo
 $slots = $ua->_active->{'lh4.ggpht.com:80'};
-is (scalar @{$slots}, 2);
-is (ref $slots->[0], 'Mojo::Pipeline');
-is (ref $slots->[1], 'MojoX::UserAgent::Transaction');
+is (scalar @{$slots}, 2, "maxconnections respected");
+is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->transactions}, 2, "with 2 transactions");
+is (ref $slots->[1], 'MojoX::UserAgent::Transaction', "got 1 transaction");
 
-is (scalar @{$slots->[0]->transactions}, 2);
 
-is (scalar @{$ua->_ondeck->{'lh4.ggpht.com:80'}}, 0);
+is (scalar @{$ua->_ondeck->{'lh4.ggpht.com:80'}}, 0, "0 ondeck");
 
 $ua->run_all;
 
-ok($ua->is_idle);
+ok($ua->is_idle, "is_idle");
 
 
 # Play it safe
@@ -95,6 +103,13 @@ $ua->maxpipereqs(3);
 
 $ua->pipeline_method('vertical');
 
+$ua->default_done_cb(
+    sub {
+        my ($ua, $tx) = @_;
+        is($tx->res->code, 200, "Status 200");
+        is($tx->res->headers->content_type, 'image/jpeg', "Got image");
+    }
+);
 
 my @urls3 =
   ( 'http://lh5.ggpht.com/_bvKfYeSTo5U/SnSC17xJJyI/AAAAAAAAGQs/Z_aRDN6So0U/s640/Eileens%20vase.jpg',
@@ -108,12 +123,12 @@ for my $url (@urls3) {
 
 $act_count = $ua->crank_all;
 
-is ($act_count, 1);
+is ($act_count, 1, "active count good");
 # Peekaboo
 $slots = $ua->_active->{'lh5.ggpht.com:80'};
-is (scalar @{$slots}, 1);
-is (ref $slots->[0], 'Mojo::Pipeline');
-is (scalar @{$slots->[0]->transactions}, 3);
+is (scalar @{$slots}, 1, "only 1 connection used");
+is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->transactions}, 3, "with 3 transactions");
 
 $ua->run_all;
 
@@ -123,19 +138,18 @@ for my $url (@urls1) {
 
 $act_count = $ua->crank_all;
 
-is ($act_count, 3);
+is ($act_count, 3, "active count good");
 # Peekaboo
 $slots = $ua->_active->{'lh3.ggpht.com:80'};
-is (scalar @{$slots}, 3);
-is (ref $slots->[0], 'Mojo::Pipeline');
-is (ref $slots->[1], 'Mojo::Pipeline');
-is (ref $slots->[2], 'Mojo::Pipeline');
+is (scalar @{$slots}, 3, "maxconnections respected");
+is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->transactions}, 3, "with 3 transactions");
+is (ref $slots->[1], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[1]->transactions}, 3, "with 3 transactions");
+is (ref $slots->[2], 'Mojo::Pipeline', "got a pipeline");
+is (scalar @{$slots->[2]->transactions}, 3, "with 3 transactions");
 
-is (scalar @{$slots->[0]->transactions}, 3);
-is (scalar @{$slots->[1]->transactions}, 3);
-is (scalar @{$slots->[2]->transactions}, 3);
-
-is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 4);
+is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 4, "4 ondeck");
 
 $ua->run_all;
 
