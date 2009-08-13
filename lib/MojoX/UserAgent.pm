@@ -133,8 +133,9 @@ sub crank_dest {
     my @still_active;
     my @finished;
 
-    $self->_find_finished->{$self->pipeline_method}
-          ->($self, $active, \@still_active, \@finished);
+    # Use appropriate sub to find finished txs based on pipelining method
+    my $zesub = $self->_find_finished->{$self->pipeline_method};
+    $self->$zesub($active, \@still_active, \@finished);
 
     for my $tx (@finished) {
 
@@ -490,8 +491,8 @@ sub _update_active {
 
         # Use appropriate method to add to the active queue
         my $slots = $self->maxconnections - $act_count;
-        $self->_pipe_methods->{$self->pipeline_method}
-          ->($self, $slots, $ondeck, $active);
+        my $zesub = $self->_pipe_methods->{$self->pipeline_method};
+        $self->$zesub($slots, $ondeck, $active);
     }
 
     return $active;

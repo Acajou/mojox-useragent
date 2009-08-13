@@ -13,7 +13,7 @@ __PACKAGE__->attr('size' => 0);
 
 sub store {
     my $self = shift;
-    my $cookies = shift;
+    my $cookies = (ref $_[0] eq 'ARRAY') ? shift : [@_];
 
     for my $cookie (@{$cookies}) {
 
@@ -37,8 +37,10 @@ sub store {
                     $found = 1;
 
                     # Check for unset
-                    if (defined $cookie->max_age
-                        && $cookie->max_age == 0)
+                    if ((defined $cookie->max_age && $cookie->max_age == 0)
+                        || (defined $cookie->expires
+                            && $cookie->expires->epoch < time)
+                      )
                     {
                         splice @{$store}, $i, 1;
                         $self->{size}--;
@@ -92,10 +94,17 @@ sub cookies_for_url {
 
         if ($store) {
 
-            for my $i (0 .. $#{$store}) {
+            my @not_expired;
 
-                my $candidate = $store->[$i];
-                my $path      = $candidate->path;
+            while (my $candidate = shift @{$store}) {
+
+                # Check for expiry while we're here
+                (defined $candidate->expires
+                      && $candidate->expires->epoch < time)
+                  ? next
+                  : push @not_expired, $candidate;
+
+                my $path = $candidate->path;
 
                 if ($urlobj->path =~ m{^$path}) {
                     unless ($candidate->port) {
@@ -108,6 +117,9 @@ sub cookies_for_url {
                     }
                 }
             }
+
+            push @{$store}, @not_expired;
+
         }
     } while (   $domain =~ s{^[\w\-]+\.(.*)}{$1}x
              && $domain =~ m{([\w\-]+\.[\w\-]+)$}x);

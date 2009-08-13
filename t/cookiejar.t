@@ -60,7 +60,7 @@ $returned = $jar->cookies_for_url('http://www.acajou.ca/foo/test#zop');
 
 is(scalar @{$returned}, 2, 'Jar returned right number of cookies.');
 isnt($returned->[0], $cookie2, 'Should not return $cookie2 (1/2)');
-isnt($returned->[1], $cookie2, 'Should not return $cookie2 (1/2)');
+isnt($returned->[1], $cookie2, 'Should not return $cookie2 (2/2)');
 
 
 # Delete cookie
