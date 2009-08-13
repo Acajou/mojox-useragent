@@ -119,21 +119,32 @@ sub crank_dest {
 
     my @still_active;
     my @finished;
-    while (my $tx = shift @{$active}) {
-        if ($tx->is_finished) {
+    while (my $slot = shift @{$active}) {
+        # TODO change this whole while to use a dispatched sub based on
+        # pipelining method
+        if ($slot->is_finished) {
 
             # if it's a pipeline, we must unpack
-            if (ref $tx eq 'Mojo::Pipeline') {
-                for my $inner (@{$tx->transactions}) {
+            if (ref $slot eq 'Mojo::Pipeline') {
+                for my $inner (@{$slot->transactions}) {
                     push @finished, $inner;
                 }
             }
             else {
-                push @finished, $tx;
+                push @finished, $slot;
             }
         }
         else {
-            push @still_active, $tx;
+            # If it's a pipeline, check for completed transactions within.
+            # It's not finished, so this won't empty it.
+            if (ref $slot eq 'Mojo::Pipeline') {
+                while (my $inner = $slot->client_shift_tx) {
+                    warn "Shifting!";
+                    push @finished, $inner;
+                }
+            }
+
+            push @still_active, $slot;
         }
     }
 
