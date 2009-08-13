@@ -54,16 +54,29 @@ __PACKAGE__->attr('_ondeck' => sub { {} });
 
 __PACKAGE__->attr('app');
 
-# Subroutine prototypes
-sub _pipe_no();
-sub _pipe_h();
-sub _pipe_v();
+# Subroutine declarations
+sub _pipe_no;
+sub _pipe_h;
+sub _pipe_v;
 
 __PACKAGE__->attr(
     '_pipe_methods' => sub {
         {   'none'       => \&_pipe_no,
             'horizontal' => \&_pipe_h,
             'vertical'   => \&_pipe_v,
+        };
+    }
+);
+
+# Subroutine declarations
+sub _find_finished_nopipe;
+sub _find_finished_pipe;
+
+__PACKAGE__->attr(
+    '_find_finished' => sub {
+        {   'none'       => \&_find_finished_nopipe,
+            'horizontal' => \&_find_finished_pipe,
+            'vertical'   => \&_find_finished_pipe
         };
     }
 );
@@ -119,23 +132,9 @@ sub crank_dest {
 
     my @still_active;
     my @finished;
-    while (my $tx = shift @{$active}) {
-        if ($tx->is_finished) {
 
-            # if it's a pipeline, we must unpack
-            if (ref $tx eq 'Mojo::Pipeline') {
-                for my $inner (@{$tx->transactions}) {
-                    push @finished, $inner;
-                }
-            }
-            else {
-                push @finished, $tx;
-            }
-        }
-        else {
-            push @still_active, $tx;
-        }
-    }
+    $self->_find_finished->{$self->pipeline_method}
+          ->($self, $active, \@still_active, \@finished);
 
     for my $tx (@finished) {
 
@@ -170,7 +169,7 @@ sub crank_dest {
                 $newu->path($oldu->query)    unless $newu->query;
                 $newu->path($oldu->fragment) unless $newu->fragment;
 
-                # Note should check res->code to see if we should
+                # TODO: check res->code to see if we should
                 # re-use the req->method...
                 my $new_tx = MojoX::UserAgent::Transaction->new(
                     {   url          => $newu,
@@ -281,12 +280,48 @@ sub _extract_cookies {
     my $cookies = $tx->res->cookies;
 
     if (@{$cookies}) {
-        my @cleared = $self->_scrub_cookies($tx, @{$cookies});
-        $self->cookie_jar->store(@cleared) if @cleared;
+        my $cleared = $self->_scrub_cookies($tx, $cookies);
+        $self->cookie_jar->store($cleared) if @{$cleared};
     }
 
 
     1;
+}
+
+sub _find_finished_pipe {
+    my ($self, $active, $still_active, $finished) = @_;
+
+    while (my $tx = shift @{$active}) {
+        if ($tx->is_finished) {
+
+            # if it's a pipeline, we must unpack
+            if (ref $tx eq 'Mojo::Pipeline') {
+                for my $inner (@{$tx->transactions}) {
+                    push @{$finished}, $inner;
+                }
+            }
+            else {
+                push @{$finished}, $tx;
+            }
+        }
+        else {
+            # TODO: get finished transactions from pipeline here
+            # (needs Mojo change first)
+            push @{$still_active}, $tx;
+        }
+    }
+
+}
+
+sub _find_finished_nopipe {
+    my ($self, $active, $still_active, $finished) = @_;
+
+    while (my $tx = shift @{$active}) {
+        $tx->is_finished
+          ? push @{$finished}, $tx
+          : push @{$still_active}, $tx;
+    }
+
 }
 
 sub _pipe_h_or_v() {
@@ -337,14 +372,14 @@ sub _pipe_h_or_v() {
     }
 }
 
-sub _pipe_h() {
+sub _pipe_h {
     my $self= shift;
 
     $self->_pipe_h_or_v(0, @_);
 
 }
 
-sub _pipe_no() {
+sub _pipe_no {
     my ($self, $slots, $ondeck, $active) = @_;
 
     my $i=0;
@@ -364,11 +399,11 @@ sub _pipe_v() {
 sub _scrub_cookies {
     my $self = shift;
     my $tx = shift;
+    my $cookies = shift;
 
-    my @cookies = @_;
-    my @cleared;
+    my @cleared = ();
 
-    for my $cookie (@cookies) {
+    for my $cookie (@{$cookies}) {
 
         # Domain check
         if ($cookie->domain) {
@@ -416,7 +451,7 @@ sub _scrub_cookies {
 
         push @cleared, $cookie;
     }
-    return @cleared;
+    return \@cleared;
 }
 
 sub _spin {

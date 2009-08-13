@@ -13,7 +13,7 @@ __PACKAGE__->attr('size' => 0);
 
 sub store {
     my $self = shift;
-    my $cookies = [@_];
+    my $cookies = shift;
 
     for my $cookie (@{$cookies}) {
 
