@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 39;
+plan tests => 49;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -149,12 +149,12 @@ $ua->get(
 
         is($tx->res->code,      200,     "Test1 (set cookie) - Status 200");
         is($tx->hops,           1,       "Test1 - 1 hop");
-        is($tx->req->url->path, '/echo', "Test1 - request path OK");
+        is($tx->req->url->path, '/echo', "Test1 - request path");
         is($tx->req->url, 'http://www.notreal.com/echo',
-            "Test1 - request url OK");
+            "Test1 - request url");
         is($tx->res->headers->content_type,
-            'text/plain', "Test1 - content-type OK");
-        like($tx->res->body, qr/testcookie=1969/, "Test1 - cookie OK");
+            'text/plain', "Test1 - content-type");
+        like($tx->res->body, qr/testcookie=1969/, "Test1 - cookie");
         like($tx->res->body,
             qr{User-Agent:.*MojoX::UserAgent/$MojoX::UserAgent::VERSION},
             "Test1 - user-agent found");
@@ -173,11 +173,11 @@ $ua->get(
 
         is($tx->res->code,      200,     "Test2 (unset cookie) - Status 200");
         is($tx->hops,           1,       "Test2 - 1 hop");
-        is($tx->req->url->path, '/echo', "Test2 - request path OK");
+        is($tx->req->url->path, '/echo', "Test2 - request path");
         is($tx->req->url, 'http://www.notreal.com/echo',
-            "Test2 - request url OK");
+            "Test2 - request url");
         is($tx->res->headers->content_type,
-            'text/plain', "Test2 - content-type OK");
+            'text/plain', "Test2 - content-type");
         unlike($tx->res->body, qr/testcookie=1969/, "Test2 - cookie gone");
     }
 );
@@ -192,10 +192,10 @@ $ua->get(
 
         is($tx->res->code, 302, "Test3 (request loop) - Status 302");
         is($tx->hops, 10, "Test3 - 10 hops");
-        is($tx->req->url->path, '/loop/10', "Test3 - request path OK");
+        is($tx->req->url->path, '/loop/10', "Test3 - request path");
         is( $tx->req->url,
             'http://www.notreal.com/loop/10',
-            "Test3 - request url OK"
+            "Test3 - request url"
         );
     }
 );
@@ -210,7 +210,7 @@ $ua->get(
 
         is($tx->res->code, 200, "Test4 (multiple set-cookie) - Status 200");
         is($tx->hops, 1, "Test4 - 1 hop");
-        is($tx->req->url->path, '/echo', "Test4 - request path OK");
+        is($tx->req->url->path, '/echo', "Test4 - request path");
         like($tx->res->body, qr/multi1=111/, "Test4 - 1st cookie found");
         like($tx->res->body, qr/multi2=222/, "Test4 - 2nd cookie found");
     }
@@ -226,7 +226,7 @@ $ua->get(
 
         is($tx->res->code, 200, "Test5 (bad cookie domains) - Status 200");
         is($tx->hops, 1, "Test5 - 1 hop");
-        is($tx->req->url->path, '/echo', "Test5 - request path OK");
+        is($tx->req->url->path, '/echo', "Test5 - request path");
         unlike($tx->res->body, qr/testevil/, "Test5 - bad cookie absent");
     }
 );
@@ -257,7 +257,7 @@ $ua->get(
         is($tx->hops, 1, "Test6 - 1 hop");
         is( $tx->req->url,
             'http://www.foo.notreal.com/echo',
-            "Test6 - request url OK"
+            "Test6 - request url"
         );
         unlike($tx->res->body, qr/testevil/, "Test6 - bad cookie absent");
     }
@@ -274,7 +274,7 @@ $ua->get(
 
         is($tx->res->code,      200,     "Test7 (custom UA string) - Status 200");
         like($tx->res->body, qr/User-Agent:.*007/,
-            "Test7 - user-agent string OK");
+            "Test7 - user-agent string");
     }
 );
 
@@ -309,6 +309,70 @@ $ua->crank_all;
 
 is(scalar @{$ua->_ondeck->{"www.notreal.com:80"}}, 1, "Test 8 - 1 tx on deck");
 is(scalar @{$ua->_active->{"www.notreal.com:80"}}, 2, "Test 8 - 2 txs active");
+
+$ua->run_all;
+
+
+# Make more complicated requests
+
+
+$ua->allow_post_redirect(0);
+
+my $tx = MojoX::UserAgent::Transaction->new(
+    {   url     => 'http://www.notreal.com/set/',
+        method  => 'POST',
+        ua      => $ua,
+        headers => {
+            expect       => '100-continue',
+            content_type => 'text/plain'
+        },
+        body     => 'Hello Mojo! 39827',
+        callback => sub {
+            my ($ua, $tx) = @_;
+            is($tx->res->code, 302,
+                "Test9 (No redirect on POST) - Status");
+            is($tx->req->headers->content_type,
+                'text/plain', "Test 8 - Content-type");
+            is($tx->req->headers->expect, '100-continue', "Test 8 - Expect");
+            is($tx->req->headers->content_length,
+                17, "Test 8 - Content-length");
+            is($tx->req->body, 'Hello Mojo! 39827', "Test 8 - Body");
+          }
+    }
+);
+
+$ua->spool($tx);
+
+$ua->run_all;
+
+$ua->allow_post_redirect(1);
+
+my $tx = MojoX::UserAgent::Transaction->new(
+    {   url     => 'http://www.notreal.com/set/',
+        method  => 'POST',
+        ua      => $ua,
+        headers => {
+            expect       => '100-continue',
+            content_type => 'text/plain'
+        },
+        body     => 'Hello Mojo! 39827',
+        callback => sub {
+            my ($ua, $tx) = @_;
+            is($tx->res->code, 200, "Test10 (Redirect on POST) - Status");
+            is($tx->req->method, 'GET', "Test10 - Method");
+            is( $tx->req->url,
+                'http://www.notreal.com/echo',
+                "Test10 - url"
+            );
+            is($tx->req->headers->content_type,
+                undef, "Test 10 - content-type");
+            is($tx->original_req->headers->content_type,
+                'text/plain', "Test 8 - original content-type");
+          }
+    }
+);
+
+$ua->spool($tx);
 
 $ua->run_all;
 

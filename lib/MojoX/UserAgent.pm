@@ -249,6 +249,7 @@ sub get {
         }
     );
     $self->spool($tx);
+    1;
 }
 
 sub is_idle {
@@ -280,6 +281,22 @@ sub maxpipereqs {
       : return $self->_maxpipereqs;
 }
 
+sub post {
+    my $self = shift;
+    my $url = shift;
+    my $cb = shift || $self->default_done_cb;
+
+    my $tx = MojoX::UserAgent::Transaction->new(
+        {   method   => 'POST',
+            url      => $url,
+            callback => $cb,
+            ua       => $self
+        }
+    );
+    $self->spool($tx);
+    1;
+}
+
 sub run_all {
     my $self = shift;
 
@@ -305,6 +322,7 @@ sub spool {
             $self->_active->{$id} = [];
         }
     }
+    1;
 }
 
 sub _extract_cookies {

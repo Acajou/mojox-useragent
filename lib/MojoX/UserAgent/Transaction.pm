@@ -22,7 +22,6 @@ sub new {
 
     croak('Missing arguments')
       if (   !defined($arg_ref->{url})
-          || !defined($arg_ref->{callback})
           || !defined($arg_ref->{ua}));
 
     my $url = $arg_ref->{url};
@@ -30,17 +29,22 @@ sub new {
       ? $req->url($url)
       : $req->url->parse($url);
 
-    $self->done_cb($arg_ref->{callback});
     $self->ua($arg_ref->{ua});
+
+    $arg_ref->{callback}
+      ? $self->done_cb($arg_ref->{callback})
+      : $self->done_cb($self->ua->default_done_cb);
 
     if ($arg_ref->{headers}) {
         my $headers = $arg_ref->{headers};
         for my $name (keys %{$headers}) {
-            $req->headers->header($name, $headers->{$name});
+            $req->headers->$name($headers->{$name});
         }
     }
 
     $req->method($arg_ref->{method}) if $arg_ref->{method};
+    $req->body($arg_ref->{body}) if $arg_ref->{body};
+
     $self->id($arg_ref->{id}) if $arg_ref->{id};
 
     # Not sure if I should allow hops or
