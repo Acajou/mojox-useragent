@@ -54,10 +54,10 @@ is ($act_count, 2, "active count good");
 # Peekaboo
 my $slots = $ua->_active->{'lh3.ggpht.com:80'};
 is (scalar @{$slots}, 2, "maxconnections respected");
-is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[0]->transactions}, 3, "with 3 transactions");
-is (ref $slots->[1], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[1]->transactions}, 3, "with 3 transactions");
+is (ref $slots->[0], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->active}, 3, "with 3 transactions");
+is (ref $slots->[1], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[1]->active}, 3, "with 3 transactions");
 
 is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 7, "7 ondeck");
 
@@ -83,8 +83,8 @@ is ($act_count, 2, "active count good");
 # Peekaboo
 $slots = $ua->_active->{'lh4.ggpht.com:80'};
 is (scalar @{$slots}, 2, "maxconnections respected");
-is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[0]->transactions}, 2, "with 2 transactions");
+is (ref $slots->[0], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->active}, 2, "with 2 transactions");
 is (ref $slots->[1], 'MojoX::UserAgent::Transaction', "got 1 transaction");
 
 
@@ -127,8 +127,8 @@ is ($act_count, 1, "active count good");
 # Peekaboo
 $slots = $ua->_active->{'lh5.ggpht.com:80'};
 is (scalar @{$slots}, 1, "only 1 connection used");
-is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[0]->transactions}, 3, "with 3 transactions");
+is (ref $slots->[0], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->active}, 3, "with 3 transactions");
 
 $ua->run_all;
 
@@ -142,12 +142,12 @@ is ($act_count, 3, "active count good");
 # Peekaboo
 $slots = $ua->_active->{'lh3.ggpht.com:80'};
 is (scalar @{$slots}, 3, "maxconnections respected");
-is (ref $slots->[0], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[0]->transactions}, 3, "with 3 transactions");
-is (ref $slots->[1], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[1]->transactions}, 3, "with 3 transactions");
-is (ref $slots->[2], 'Mojo::Pipeline', "got a pipeline");
-is (scalar @{$slots->[2]->transactions}, 3, "with 3 transactions");
+is (ref $slots->[0], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[0]->active}, 3, "with 3 transactions");
+is (ref $slots->[1], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[1]->active}, 3, "with 3 transactions");
+is (ref $slots->[2], 'Mojo::Transaction::Pipeline', "got a pipeline");
+is (scalar @{$slots->[2]->active}, 3, "with 3 transactions");
 
 is (scalar @{$ua->_ondeck->{'lh3.ggpht.com:80'}}, 4, "4 ondeck");
 

@@ -10,7 +10,7 @@ use Carp 'croak';
 use Mojo 0.991247;
 
 use Mojo::URL;
-use Mojo::Pipeline;
+use Mojo::Transaction::Pipeline;
 use Mojo::Client;
 use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
@@ -297,8 +297,8 @@ sub _find_finished_pipe {
         if ($tx->is_finished) {
 
             # if it's a pipeline, we must unpack
-            if (ref $tx eq 'Mojo::Pipeline') {
-                for my $inner (@{$tx->transactions}) {
+            if (ref $tx eq 'Mojo::Transaction::Pipeline') {
+                for my $inner (@{$tx->finished}) {
                     push @{$finished}, $inner;
                 }
             }
@@ -368,7 +368,7 @@ sub _pipe_h_or_v() {
             push @{$active}, $slot->[0];
         }
         else {
-            my $pipe = Mojo::Pipeline->new(@{$slot});
+            my $pipe = Mojo::Transaction::Pipeline->new(@{$slot});
             push @{$active}, $pipe;
         }
     }

@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use diagnostics;
 
-use base 'Mojo::Transaction';
+use base 'Mojo::Transaction::Single';
 
 use Carp 'croak';
 
