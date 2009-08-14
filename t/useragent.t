@@ -347,7 +347,7 @@ $ua->run_all;
 
 $ua->allow_post_redirect(1);
 
-my $tx = MojoX::UserAgent::Transaction->new(
+$tx = MojoX::UserAgent::Transaction->new(
     {   url     => 'http://www.notreal.com/set/',
         method  => 'POST',
         ua      => $ua,

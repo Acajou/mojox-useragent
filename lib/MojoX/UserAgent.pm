@@ -48,23 +48,23 @@ __PACKAGE__->attr('_count' => 0);
 
 __PACKAGE__->attr('_client' => sub { Mojo::Client->new });
 
-__PACKAGE__->attr('_maxconnections' => 5);
-__PACKAGE__->attr('_maxpipereqs' => 5);
+__PACKAGE__->attr('_maxconnections' => 3);
+__PACKAGE__->attr('_maxpipereqs' => 4);
 
 __PACKAGE__->attr('_active' => sub { {} });
 __PACKAGE__->attr('_ondeck' => sub { {} });
 
 
 # Subroutine declarations
-sub _pipe_no;
-sub _pipe_h;
-sub _pipe_v;
+sub _add_pipe_no;
+sub _add_pipe_h;
+sub _add_pipe_v;
 
 __PACKAGE__->attr(
-    '_pipe_methods' => sub {
-        {   'none'       => \&_pipe_no,
-            'horizontal' => \&_pipe_h,
-            'vertical'   => \&_pipe_v,
+    '_add_methods' => sub {
+        {   'none'       => \&_add_pipe_no,
+            'horizontal' => \&_add_pipe_h,
+            'vertical'   => \&_add_pipe_v,
         };
     }
 );
@@ -380,7 +380,7 @@ sub _find_finished_nopipe {
 
 }
 
-sub _pipe_h_or_v() {
+sub _add_pipe_h_or_v() {
     my ($self, $h_or_v, $slots, $ondeck, $active) = @_;
 
     my $queue_max = $slots * $self->maxpipereqs;
@@ -428,14 +428,14 @@ sub _pipe_h_or_v() {
     }
 }
 
-sub _pipe_h {
+sub _add_pipe_h {
     my $self= shift;
 
-    $self->_pipe_h_or_v(0, @_);
+    $self->_add_pipe_h_or_v(0, @_);
 
 }
 
-sub _pipe_no {
+sub _add_pipe_no {
     my ($self, $slots, $ondeck, $active) = @_;
 
     my $i=0;
@@ -445,10 +445,10 @@ sub _pipe_no {
     }
 }
 
-sub _pipe_v() {
+sub _add_pipe_v() {
     my $self= shift;
 
-    $self->_pipe_h_or_v(1, @_);
+    $self->_add_pipe_h_or_v(1, @_);
 
 }
 
@@ -553,7 +553,7 @@ sub _update_active {
 
         # Use appropriate method to add to the active queue
         my $slots = $self->maxconnections - $act_count;
-        my $add_sub = $self->_pipe_methods->{$self->pipeline_method};
+        my $add_sub = $self->_add_methods->{$self->pipeline_method};
         $self->$add_sub($slots, $ondeck, $active);
     }
 
