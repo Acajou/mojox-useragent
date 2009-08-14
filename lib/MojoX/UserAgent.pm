@@ -185,7 +185,7 @@ sub crank_dest {
                         )
                     }
                 );
-                $self->spool_txs($new_tx);
+                $self->spool($new_tx);
             }
             else {
 
@@ -217,7 +217,7 @@ sub get {
             ua       => $self
         }
     );
-    $self->spool_txs($tx);
+    $self->spool($tx);
 }
 
 sub is_idle {
@@ -258,7 +258,7 @@ sub run_all {
     }
 }
 
-sub spool_txs {
+sub spool {
     my $self = shift;
     my $new_transactions = [@_];
     for my $tx (@{$new_transactions}) {
