@@ -260,7 +260,8 @@ sub run_all {
 
 sub spool {
     my $self = shift;
-    my $new_transactions = [@_];
+    my $new_transactions = (ref $_[0] eq 'ARRAY') ? shift : [@_];
+
     for my $tx (@{$new_transactions}) {
         my ($scheme, $host, $port) = $tx->client_info;
 
