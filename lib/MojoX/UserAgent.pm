@@ -298,7 +298,7 @@ sub _find_finished_pipe {
 
             # if it's a pipeline, we must unpack
             if (ref $tx eq 'Mojo::Transaction::Pipeline') {
-                for my $inner (@{$tx->finished}) {
+                while (my $inner = shift @{$tx->finished}) {
                     push @{$finished}, $inner;
                 }
             }
@@ -307,8 +307,13 @@ sub _find_finished_pipe {
             }
         }
         else {
-            # TODO: get finished transactions from pipeline here
-            # (needs Mojo change first)
+            # if it's a pipeline, look for finished single transactions within
+            if (ref $tx eq 'Mojo::Transaction::Pipeline') {
+                while (my $inner = shift @{$tx->finished}) {
+                    push @{$finished}, $inner;
+                }
+            }
+
             push @{$still_active}, $tx;
         }
     }
