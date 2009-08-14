@@ -437,6 +437,13 @@ sub _scrub_cookies {
             next unless $cookie->port =~ m/^[\d\,]+$/;
         }
 
+        # Clean max-age
+        if ($cookie->max_age) {
+
+            # Integer number - only digits
+            next unless $cookie->max_age =~ m/^\d+$/;
+        }
+
         # Path check
         if ($cookie->path) {
 

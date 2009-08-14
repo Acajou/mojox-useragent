@@ -22,6 +22,9 @@ sub store {
         my $domain = $cookie->domain;
         my $store = $self->_jar->{$domain};
 
+        # max-age wins over expires
+        $cookie->expires($cookie->max_age + time) if $cookie->max_age;
+
         if ($store) {
 
             # Do we already have this cookie?
@@ -94,6 +97,7 @@ sub cookies_for_url {
 
         if ($store) {
 
+            my $store_size = scalar @{$store};
             my @not_expired;
 
             while (my $candidate = shift @{$store}) {
@@ -119,6 +123,7 @@ sub cookies_for_url {
             }
 
             push @{$store}, @not_expired;
+            $self->size($self->size + scalar(@not_expired) - $store_size);
 
         }
     } while (   $domain =~ s{^[\w\-]+\.(.*)}{$1}x
