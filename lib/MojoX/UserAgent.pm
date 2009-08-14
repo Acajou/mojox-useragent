@@ -18,6 +18,9 @@ use MojoX::UserAgent::CookieJar;
 
 our $VERSION = '0.1';
 
+__PACKAGE__->attr('allow_post_redirect', 1);
+__PACKAGE__->attr('app');
+
 __PACKAGE__->attr('follow_redirects' => 1);
 __PACKAGE__->attr('redirect_limit' => 10);
 
@@ -51,8 +54,6 @@ __PACKAGE__->attr('_maxpipereqs' => 5);
 __PACKAGE__->attr('_active' => sub { {} });
 __PACKAGE__->attr('_ondeck' => sub { {} });
 
-
-__PACKAGE__->attr('app');
 
 # Subroutine declarations
 sub _pipe_no;
@@ -146,52 +147,82 @@ sub crank_dest {
         $self->_extract_cookies($tx);
 
         # Check for redirect
+        my $redirect = 0;
+        my $method;
+        my $location;
+
         if (   $tx->res->is_status_class(300)
             && $self->follow_redirects
             && $tx->hops < $self->redirect_limit
-            && (my $location = $tx->res->headers->header('Location')))
+            && ($location = $tx->res->headers->header('Location')))
         {
 
             # Presumably 304 (not modified) shouldn't include
             # a Location so shouldn't come in here...
+            my $code = $tx->res->code;
 
-            unless ($tx->res->code == 305) {
+            if ($code == 301 || $code == 302 || $code == 307) {
+                if ($tx->req->method eq 'GET' || $tx->req->method eq 'HEAD') {
+                    $redirect = 1;
+                    $method   = $tx->req->method;
+                }
+                elsif ($self->allow_post_redirect) {
 
-                # Give priority to the new URL where it gives info,
-                # otherwise, keep elements of the old URL...
-                my $newu = Mojo::URL->new();
-                $newu->parse($location);
-                my $oldu = $tx->req->url;
+                    # This setting allows automated POST redirection to a GET
+                    # for a different resource.  This goes against the
+                    # current HTTP/1.1 specification, but appears to be
+                    # most browsers' default behavior...
+                    $redirect = 1;
+                    $method   = 'GET';
+                }
+            }
+            elsif ($code == 303) {
+                $redirect = 1;
+                $method   = 'GET';
+            }
+            elsif ($code == 305) {
 
-                $newu->scheme($oldu->scheme)       unless $newu->is_abs;
-                $newu->authority($oldu->authority) unless $newu->is_abs;
-
-                $newu->path($oldu->path)     unless $newu->path;
-                $newu->path($oldu->query)    unless $newu->query;
-                $newu->path($oldu->fragment) unless $newu->fragment;
-
-                # TODO: check res->code to see if we should
-                # re-use the req->method...
-                my $new_tx = MojoX::UserAgent::Transaction->new(
-                    {   url          => $newu,
-                        method       => $tx->req->method,
-                        hops         => $tx->hops + 1,
-                        callback     => $tx->done_cb,
-                        ua           => $self,
-                        original_req => (
-                              $tx->original_req
-                            ? $tx->original_req
-                            : $tx->req
-                        )
-                    }
-                );
-                $self->spool($new_tx);
+                # Set up a proxied request (TODO)
+                $tx->error('Proxy support not yet implemented');
             }
             else {
 
-                # Set up a proxied request (TODO)
-                croak('Proxy support not yet implemented');
+                # unknown 3xx response... what to do?
+                $tx->error('Unknown 3xx response');
             }
+
+        }
+
+
+        if ($redirect) {
+
+            my $newurl = Mojo::URL->new();
+            $newurl->parse($location);
+            my $oldurl = $tx->req->url;
+
+            # Deal with relative redirection
+            $newurl->scheme($oldurl->scheme)       unless $newurl->is_abs;
+            $newurl->authority($oldurl->authority) unless $newurl->is_abs;
+
+            unless ($newurl->path =~ m{^/}) {
+                $newurl->path($oldurl->path->append($newurl->path));
+            }
+
+            my $new_tx = MojoX::UserAgent::Transaction->new(
+                {   url          => $newurl,
+                    method       => $method,
+                    hops         => $tx->hops + 1,
+                    callback     => $tx->done_cb,
+                    ua           => $self,
+                    original_req => (
+                          $tx->original_req
+                        ? $tx->original_req
+                        : $tx->req
+                    )
+                }
+            );
+            $self->spool($new_tx);
+
         }
         else {
 
