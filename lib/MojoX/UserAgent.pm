@@ -574,3 +574,211 @@ sub _update_active {
 
 1;
 __END__
+
+=head1 NAME
+
+MojoX::User-Agent - An asynchronous user-agent for the Mojo Web Framework.
+
+=head1 SYNOPSIS
+
+    use MojoX::UserAgent;
+    my $ua = MojoX::UserAgent->new;
+
+    # Simple
+
+    $ua->default_done_cb(
+        sub {
+            my ($ua, $tx) = @_;
+            $tx->has_error
+              ? print $tx->error
+              : print $tx->res;
+        }
+    );
+
+    $ua->get('http://www.google.com/');
+
+    $ua->run_all;
+
+    # More Complicated
+
+    $tx = MojoX::UserAgent::Transaction->new(
+        {   url     => 'http://www.some.host.com/bla/',
+            method  => 'POST',
+            ua      => $ua,
+            id      => '123456',
+            headers => {
+                expect       => '100-continue',
+                content_type => 'text/plain'
+            },
+            body     => 'Hello!',
+            callback => sub {
+                my ($ua, $tx) = @_;
+                ok(!$tx->has_error, 'Completed');
+                is($tx->id, '123456', 'Request ID');
+                is($tx->res->code, 200, 'Status 200');
+            }
+        }
+    };
+
+    $ua->spool($tx);
+
+    while (1);
+        $ua->crank_all;
+        # do other stuff
+        # ...
+        last if $ua->is_idle;
+    }
+
+
+=head1 DESCRIPTION
+
+L<MojoX::UserAgent> is an asynchronous user-agent built upon the Mojo
+Web Framework.  It supports basic session cookies, follows
+redirections automatically and implements opportunistic HTTP request
+pipelining.
+
+
+
+=head1 ATTRIBUTES
+
+L<MojoX::UserAgent> implements the following attributes.
+
+=head2 C<allow_post_redirect>
+
+Defaults to 1.  Controls whether to allow a POST to be redirected to a
+GET for another resource on a 301 or 302 response.  Default value immitates
+common browser behavior (and goes against the current HTTP/1.1 specification).
+
+=head2 C<agent>
+
+Defaults to 'Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)'.  The User-Agent string
+that is used with every request that is made.
+
+=head2 C<app>
+
+Defaults to undef.  If set, L<MojoX::UserAgent> will send transactions
+to your application via Mojo's builtin facility for doing so.  This
+doesn't require any connectivity, and the application doesn't need to
+be started separately.  Great for testing.
+
+=head2 C<cookie_jar>
+
+The place where session cookies are stored.  See L<MojoX::UserAgent::CookieJar>.
+
+=head2 C<default_done_cb>
+
+Defaults to a not particularly useful sub. This is the sub that is
+used as a callback for every transaction for which a different
+callback is not provided.  Set it.
+
+=head2 C<follow_redirects>
+
+Defaults to 1.  Whether or not to follow HTTP redirects.
+
+=head2 C<pipeline_method>
+
+Defaults to 'none'.  Other possible values are 'horizontal' and 'vertical'.
+
+=head2 C<redirect_limit>
+
+Defaults to 10.  Number of redirections to allow for any transaction.
+
+=head2 C<validate_cookie_paths>
+
+Defaults to 0.  When activated, cookie paths must be a prefix of the current request URL.
+
+=head1 METHODS
+
+L<MojoX::UserAgent> inherits all methods from L<Mojo::Base> and implements the
+following new ones.
+
+=head2 C<new>
+
+    my $ua = MojoX::UserAgent->new;
+
+=head2 C<cookies_for_url>
+
+    my $cookies = $ua->cookies_for_url('http://www.foo.bar.com/baz/');
+
+Get currently active cookies for a given URL.  This is a callback used
+by L<MojoX::UserAgent::Transaction> in order to add cookies to a
+request that is about to be sent. Pass in either a URL string or a
+Mojo::URL object.  Returns a reference to an array of
+Mojo::Cookie::Request objects.
+
+=head2 C<crank_all>
+
+    my $active = $ua->crank_all;
+
+Perform a single IO operation on all currently active connections.
+Returns the total number of currently active connections. Note that
+this number could be zero without the UA being idle, since
+transactions are added to the queue at the beginning of the cycle.
+Use is_idle to test whether the UA is done with all currently spooled
+requests.
+
+=head2 C<crank_dest>
+
+Perform a single IO operation on all currently active connections to a
+given server.  Returns the total number of currently active
+connections. Note that this number could be zero without the UA being
+idle, since transactions are added to the queue at the beginning of
+the cycle.  It is not currently recommended that you use this method
+directly - use crank_all instead.
+
+=head2 C<get>
+
+    my $sub = sub { ... };
+    $ua->get('http://www.bar.foo.com/baz/', $sub);
+
+A helper method to queue a simple GET request.  The second argument is
+facultative.  If not provided, the default_done_cb will be used.
+
+=head2 C<is_idle>
+
+    my $idle = $ua->is_idle;
+
+True if and only if the UserAgent currently has not outstanding transactions.
+
+=head2 C<maxconnections>
+
+Use as a set-once attribute.  Sets the maximum number of concurrent
+connections to a given server.  Any value change will be ignored
+unless is_idle is true.
+
+=head2 C<maxpipereqs>
+
+Use as a set-once attribute.  Sets the maximum number of transactions
+that may be pipelined to a given server over a given connection.  Any
+value change will be ignored unless is_idle is true.
+
+=head2 C<post>
+
+    my $sub = sub { ... };
+    $ua->post('http://www.bar.foo.com/baz/', $sub);
+
+A helper method to queue a simple POST request.  The second argument
+is facultative.  If not provided, the default_done_cb will be
+used. Note that for more complex requests, you should instantiate a
+L<MojoX::UserAgent::Transaction> directly and then spool it yourself.
+
+=head2 C<run_all>
+
+   $ua->run_all;
+
+A blocking method that only returns when all spooled transactions
+(including intervening redirects) are finished.
+
+=head2 C<spool>
+
+    my $tx = MojoX::UserAgent::Transaction->new(
+        { [...]
+        }
+    );
+    $self->spool($tx);
+
+Spool one or a series of L<MojoX::UserAgent::Transaction> objects.
+Please see the L<MojoX::UserAgent::Transaction> POD for information on
+how to instantiate such an object.
+
+=cut
