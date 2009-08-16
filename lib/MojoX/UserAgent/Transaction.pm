@@ -24,6 +24,8 @@ sub new {
       if (   !defined($arg_ref->{url})
           || !defined($arg_ref->{ua}));
 
+    $self->res->code(999); # Default response status should not be 200
+
     my $url = $arg_ref->{url};
     ref $url && $url->isa('Mojo::URL')
       ? $req->url($url)

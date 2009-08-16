@@ -350,6 +350,17 @@ sub _find_finished_pipe {
                 while (my $inner = shift @{$tx->finished}) {
                     push @{$finished}, $inner;
                 }
+
+                # We must also unpack from the other two queues...
+                while (my $inner = (shift @{$tx->inactive} || shift @{$tx->active})) {
+                    unless ($inner->has_error) {
+                        $tx->has_error
+                          ? $inner->error($tx->error)
+                          : $inner->error('Something weird happened');
+                    }
+                    push @{$finished}, $inner;
+                }
+
             }
             else {
                 push @{$finished}, $tx;
