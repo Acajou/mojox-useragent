@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 49;
+plan tests => 51;
 
 my $ua = MojoX::UserAgent->new;
 
@@ -322,6 +322,7 @@ my $tx = MojoX::UserAgent::Transaction->new(
     {   url     => 'http://www.notreal.com/set/',
         method  => 'POST',
         ua      => $ua,
+        id      => "a1a1a1",
         headers => {
             expect       => '100-continue',
             content_type => 'text/plain'
@@ -331,12 +332,13 @@ my $tx = MojoX::UserAgent::Transaction->new(
             my ($ua, $tx) = @_;
             is($tx->res->code, 302,
                 "Test9 (No redirect on POST) - Status");
+            is($tx->id, 'a1a1a1', "Test 9 - ID");
             is($tx->req->headers->content_type,
-                'text/plain', "Test 8 - Content-type");
-            is($tx->req->headers->expect, '100-continue', "Test 8 - Expect");
+                'text/plain', "Test 9 - Content-type");
+            is($tx->req->headers->expect, '100-continue', "Test 9 - Expect");
             is($tx->req->headers->content_length,
-                17, "Test 8 - Content-length");
-            is($tx->req->body, 'Hello Mojo! 39827', "Test 8 - Body");
+                17, "Test 9 - Content-length");
+            is($tx->req->body, 'Hello Mojo! 39827', "Test 9 - Body");
           }
     }
 );
@@ -351,6 +353,7 @@ $tx = MojoX::UserAgent::Transaction->new(
     {   url     => 'http://www.notreal.com/set/',
         method  => 'POST',
         ua      => $ua,
+        id      => "a2a2a2",
         headers => {
             expect       => '100-continue',
             content_type => 'text/plain'
@@ -359,6 +362,7 @@ $tx = MojoX::UserAgent::Transaction->new(
         callback => sub {
             my ($ua, $tx) = @_;
             is($tx->res->code, 200, "Test10 (Redirect on POST) - Status");
+            is($tx->id, 'a2a2a2', "Test 10 - ID");
             is($tx->req->method, 'GET', "Test10 - Method");
             is( $tx->req->url,
                 'http://www.notreal.com/echo',
@@ -367,7 +371,7 @@ $tx = MojoX::UserAgent::Transaction->new(
             is($tx->req->headers->content_type,
                 undef, "Test 10 - content-type");
             is($tx->original_req->headers->content_type,
-                'text/plain', "Test 8 - original content-type");
+                'text/plain', "Test 10 - original content-type");
           }
     }
 );

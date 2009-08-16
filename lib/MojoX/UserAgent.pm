@@ -211,6 +211,7 @@ sub crank_dest {
             my $new_tx = MojoX::UserAgent::Transaction->new(
                 {   url          => $newurl,
                     method       => $method,
+                    id           => $tx->id,
                     hops         => $tx->hops + 1,
                     callback     => $tx->done_cb,
                     ua           => $self,
@@ -622,7 +623,7 @@ MojoX::User-Agent - An asynchronous user-agent for the Mojo Web Framework.
 
     $ua->spool($tx);
 
-    while (1);
+    while (1) {
         $ua->crank_all;
         # do other stuff
         # ...
@@ -738,7 +739,7 @@ facultative.  If not provided, the default_done_cb will be used.
 
     my $idle = $ua->is_idle;
 
-True if and only if the UserAgent currently has not outstanding transactions.
+True if and only if the UserAgent currently has no outstanding transactions.
 
 =head2 C<maxconnections>
 
@@ -779,6 +780,6 @@ A blocking method that only returns when all spooled transactions
 
 Spool one or a series of L<MojoX::UserAgent::Transaction> objects.
 Please see the L<MojoX::UserAgent::Transaction> POD for information on
-how to instantiate such an object.
+how to instantiate such objects.
 
 =cut
