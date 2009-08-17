@@ -8,8 +8,9 @@ use base 'Mojo::Base';
 
 use Carp 'croak';
 
-__PACKAGE__->attr('_jar' => sub { {} });
 __PACKAGE__->attr('size' => 0);
+
+__PACKAGE__->attr('_jar' => sub { {} });
 
 sub store {
     my $self = shift;
@@ -136,3 +137,63 @@ sub cookies_for_url {
 
 
 1;
+__END__
+
+=head1 NAME
+
+MojoX::UserAgent::CookieJar - a place to store L<Mojo::Cookie::Response> objects.
+
+=head1 SYNOPSIS
+
+    my $jar = MojoX::UserAgent::CookieJar->new;
+    # ...
+    $jar->store($resp_cookies_array_ref);
+    $jar->store($resp_cookie1, $resp_cookie2);
+    # ...
+    my $cookies = $jar->cookies_for_url($url);
+
+=head1 DESCRIPTION
+
+This is the class used by L<MojoX::UserAgent> to store session
+cookies.  Note that it does no validation itself. It does, however,
+expire cookies as appropriate based on either their "expires" or
+"max_age" properties.
+
+
+=head1 ATTRIBUTES
+
+L<MojoX::UserAgent::CookieJar> implements the following attributes.
+
+=head2 C<size>
+
+    my $jar_size = $jar->size;
+
+The number of cookies currently stored in the jar.
+
+=head1 METHODS
+
+L<MojoX::UserAgent::CookieJar> inherits all methods from L<Mojo::Base>
+and implements the following new ones.
+
+
+=head2 C<store>
+
+    my $jar_size = $jar->store($resp_cookie1, $resp_cookie2);
+
+Store cookies in the jar.  Arguments: either a reference to an array
+of L<Mojo::Cookie::Response> objects or a set of such objects. All
+cookies must have a domain property. If cookies have both expires and
+max_age properties, max_age wins. Returns the number of cookies
+currently stored in the jar.
+
+=head2 C<cookies_for_url>
+
+    my $cookies = $jar->cookies_for_url($url);
+
+Get the cookies that match a given URL.  You may pass in either a URL
+string or a L<Mojo::URL> object.  Returns a reference to an array of
+L<Mojo::Cookie::Response> objects.  Turning these into
+L<Mojo::Cookie::Request> objects is left as an exercise for the
+caller.
+
+=cut

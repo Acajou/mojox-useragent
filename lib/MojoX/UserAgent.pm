@@ -602,7 +602,7 @@ MojoX::User-Agent - An asynchronous user-agent for the Mojo Web Framework.
 
     # More Complicated
 
-    $tx = MojoX::UserAgent::Transaction->new(
+    my $tx = MojoX::UserAgent::Transaction->new(
         {   url     => 'http://www.some.host.com/bla/',
             method  => 'POST',
             ua      => $ua,

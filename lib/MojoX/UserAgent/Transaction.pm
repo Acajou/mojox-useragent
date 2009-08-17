@@ -8,8 +8,8 @@ use base 'Mojo::Transaction::Single';
 
 use Carp 'croak';
 
-__PACKAGE__->attr('hops' => 0);
 __PACKAGE__->attr('done_cb');
+__PACKAGE__->attr('hops' => 0);
 __PACKAGE__->attr('id');
 __PACKAGE__->attr('original_req');
 __PACKAGE__->attr('ua');
@@ -62,6 +62,7 @@ sub client_connect {
 
     # Add cookies
     my $cookies = $self->ua->cookies_for_url($self->req->url);
+
     # What if req already had some cookies?
     $self->req->cookies(@{$cookies});
 
@@ -74,3 +75,103 @@ sub client_connect {
     return $self;
 }
 1;
+
+=head1 NAME
+
+MojoX::UserAgent::Transaction - Basic building block of
+L<MojoX::UserAgent>, encapsulates a single HTTP exchange.
+
+=head1 SYNOPSIS
+
+    my $tx = MojoX::UserAgent::Transaction->new(
+        {   url     => 'http://www.some.host.com/bla/',
+            method  => 'POST',
+            ua      => $ua,
+            id      => '123456',
+            headers => {
+                expect       => '100-continue',
+                content_type => 'text/plain'
+            },
+            body     => 'Hello!',
+            callback => sub {
+                my ($ua, $tx) = @_;
+                ok(!$tx->has_error, 'Completed');
+                is($tx->id, '123456', 'Request ID');
+                is($tx->res->code, 200, 'Status 200');
+            }
+        }
+    };
+
+    $ua->spool($tx);
+
+
+=head1 DESCRIPTION
+
+A subclass of L<Mojo::Transaction::Single>, this class simply adds
+the few extra elements that are needed by L<MojoX::UserAgent>.
+
+
+=head1 ATTRIBUTES
+
+This class inherits all the attributes of L<Mojo::Transaction::Single>, and
+adds the following.
+
+=head2 C<done_cb>
+
+The subroutine that will be called once the transaction is completed.
+
+=head2 C<hops>
+
+The number of hops (ie redirects) that this transaction has gone through.
+
+=head2 C<id>
+
+An optional transaction identifier. Not used internally by the class,
+but passed back to the callback.
+
+=head2 C<original_req>
+
+If the transaction is redirected, this holds the original request object.
+
+=head2 C<ua>
+
+A pointer back to the L<MojoX::UserAgent> to which this transaction is
+submitted.
+
+
+=head1 METHODS
+
+L<MojoX::UserAgent::Transaction> inherits all methods from
+L<Mojo::Transaction::Single> and implements the following new ones.
+
+
+=head2 C<new>
+
+Constructor that accepts a reference to a hash of named arguments.
+This hash must contain the following key/value pairs:
+
+- key: 'url' value: either a string or a L<Mojo::URL> object;
+- key: 'ua'  value: a reference to the L<Mojox::UserAgent> object
+  to which this transaction belongs.
+
+It may also contain any/all of the following:
+
+- key: 'callback' value: the callback subroutine that will be
+  called when this transaction is finished;
+- key: 'headers' value: a reference to a hash of request headers
+  (see L<Mojo::Message::Request>);
+- key: 'method' value: the HTTP method to be used in the request;
+- key: 'body' value: the contents of the body of the request;
+- key: 'id' value: the value of the id attribute (see above);
+- key: 'hops' value: the value of the hops attribute (see above,
+  should only be set by the User-Agent);
+- key: 'original_req' value: the original L<Mojo::Message::Request>
+  object iff hops isn't 0.
+
+=head2 C<client_connect>
+
+Called when the transaction is about to be sent out, this method is
+used to add the User-Agent and request cookies to the outgoing
+request.
+
+=cut
