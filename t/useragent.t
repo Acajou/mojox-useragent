@@ -6,9 +6,7 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
-plan tests => 51;
-
-my $ua = MojoX::UserAgent->new;
+plan tests => 54;
 
 {
     package CookieTest;
@@ -140,7 +138,26 @@ my $ua = MojoX::UserAgent->new;
 my $app = CookieTest->new;
 isa_ok($app, "Mojo::HelloWorld");
 
+my $ua = MojoX::UserAgent->new;
 $ua->app($app);
+
+$ua->default_headers(
+    {   'X-Foo' => 'quux',
+        'X-Bar' => '1001001'
+    }
+);
+
+$ua->get(
+    'http://www.notreal.com/echo/',
+    sub {
+        my ($ua_r, $tx) = @_;
+
+        is($tx->res->code,      200,     "Test0 (default headers) - Status 200");
+        is($tx->req->headers->header('X-Foo'), 'quux', "Test0 - X-Foo");
+        is($tx->req->headers->header('X-Bar'), '1001001', "Test0 - X-Bar");
+    }
+);
+
 
 $ua->get(
     'http://www.notreal.com/set/',
@@ -267,6 +284,7 @@ $ua->run_all;
 
 
 $ua->agent("007");
+
 $ua->get(
     'http://www.notreal.com/echo/',
     sub {

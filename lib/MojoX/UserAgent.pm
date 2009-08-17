@@ -37,6 +37,8 @@ __PACKAGE__->attr(
     }
 );
 
+__PACKAGE__->attr('default_headers');
+
 __PACKAGE__->attr('follow_redirects' => 1);
 
 # pipeline_method: 'none' / 'horizontal' / 'vertical'
@@ -676,6 +678,15 @@ used as a callback for every transaction for which a different
 callback is not provided.  Set it.  When invoked, this sub is passed
 two arguments: the UserAgent object that performed the transaction
 and the transaction itself.
+
+=head2 C<default_headers>
+
+Defaults to undef.  When set to a hash reference, the given key/value
+pairs will be added as header names and values to every outgoing
+request, unless a different value for a given header is already set in
+a given L<MojoX::UserAgent::Transaction> object.  Example:
+
+    $ua->default_headers({ 'Accept-Language' => 'en-us,en;q=0.5'});
 
 =head2 C<follow_redirects>
 

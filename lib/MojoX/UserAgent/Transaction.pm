@@ -59,14 +59,27 @@ sub new {
 sub client_connect {
     my $self = shift;
 
-    # Add cookies
-    my $cookies = $self->ua->cookies_for_url($self->req->url);
+    my $ua = $self->ua;
 
-    # What if req already had some cookies?
+    # Add default headers
+
+    if (my $dh = $ua->default_headers) {
+        for my $name (keys %{$dh}) {
+            $self->req->headers->header($name, $dh->{$name})
+              unless $self->req->headers->header($name);
+        }
+    }
+
+    # Add cookies
+    # (What if req already had some cookies?)
+
+    my $cookies = $ua->cookies_for_url($self->req->url);
     $self->req->cookies(@{$cookies});
 
+    # Add User-Agent identification
+
     unless ($self->req->headers->user_agent) {
-        my $ua_str = $self->ua->agent;
+        my $ua_str = $ua->agent;
         $self->req->headers->user_agent($ua_str) if $ua_str;
     }
 
