@@ -19,20 +19,13 @@ use MojoX::UserAgent::CookieJar;
 our $VERSION = '0.1';
 
 __PACKAGE__->attr('allow_post_redirect', 1);
-__PACKAGE__->attr('app');
-
-__PACKAGE__->attr('follow_redirects' => 1);
-__PACKAGE__->attr('redirect_limit' => 10);
-
-# pipeline_method: 'none' / 'horizontal' / 'vertical'
-__PACKAGE__->attr('pipeline_method' => 'none');
-
-__PACKAGE__->attr('validate_cookie_paths' => 0);
-
-__PACKAGE__->attr('cookie_jar' => sub { MojoX::UserAgent::CookieJar->new });
 
 __PACKAGE__->attr(
     'agent' => "Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)");
+
+__PACKAGE__->attr('app');
+
+__PACKAGE__->attr('cookie_jar' => sub { MojoX::UserAgent::CookieJar->new });
 
 __PACKAGE__->attr(
     'default_done_cb' => sub {
@@ -43,6 +36,16 @@ __PACKAGE__->attr(
         };
     }
 );
+
+__PACKAGE__->attr('follow_redirects' => 1);
+
+# pipeline_method: 'none' / 'horizontal' / 'vertical'
+__PACKAGE__->attr('pipeline_method' => 'none');
+
+__PACKAGE__->attr('redirect_limit' => 10);
+
+__PACKAGE__->attr('validate_cookie_paths' => 0);
+
 
 __PACKAGE__->attr('_count' => 0);
 

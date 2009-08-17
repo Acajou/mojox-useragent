@@ -2,7 +2,6 @@ package MojoX::UserAgent::Transaction;
 
 use warnings;
 use strict;
-use diagnostics;
 
 use base 'Mojo::Transaction::Single';
 
@@ -67,8 +66,8 @@ sub client_connect {
     $self->req->cookies(@{$cookies});
 
     unless ($self->req->headers->user_agent) {
-        my $ua = $self->ua->agent;
-        $self->req->headers->user_agent($ua) if $ua;
+        my $ua_str = $self->ua->agent;
+        $self->req->headers->user_agent($ua_str) if $ua_str;
     }
 
     $self->SUPER::client_connect();

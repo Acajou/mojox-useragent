@@ -2,7 +2,6 @@ package MojoX::UserAgent::CookieJar;
 
 use warnings;
 use strict;
-use diagnostics;
 
 use base 'Mojo::Base';
 
