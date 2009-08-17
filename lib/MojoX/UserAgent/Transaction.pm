@@ -119,6 +119,8 @@ adds the following.
 =head2 C<done_cb>
 
 The subroutine that will be called once the transaction is completed.
+When invoked, this sub is passed two arguments: the UserAgent object
+that performed the transaction and the transaction itself.
 
 =head2 C<hops>
 
@@ -135,8 +137,8 @@ If the transaction is redirected, this holds the original request object.
 
 =head2 C<ua>
 
-A pointer back to the L<MojoX::UserAgent> to which this transaction is
-submitted.
+A pointer back to the L<MojoX::UserAgent> to which this transaction was
+spooled.
 
 
 =head1 METHODS
@@ -170,7 +172,7 @@ It may also contain any/all of the following:
 =item *
 
 key: 'callback' value: the callback subroutine that will be
-called when this transaction is finished;
+called when this transaction is finished (see done_cb above);
 
 =item *
 

@@ -670,7 +670,9 @@ The place where session cookies are stored.  See L<MojoX::UserAgent::CookieJar>.
 
 Defaults to a not particularly useful sub. This is the sub that is
 used as a callback for every transaction for which a different
-callback is not provided.  Set it.
+callback is not provided.  Set it.  When invoked, this sub is passed
+two arguments: the UserAgent object that performed the transaction
+and the transaction itself.
 
 =head2 C<follow_redirects>
 
