@@ -150,23 +150,56 @@ L<Mojo::Transaction::Single> and implements the following new ones.
 Constructor that accepts a reference to a hash of named arguments.
 This hash must contain the following key/value pairs:
 
-- key: 'url' value: either a string or a L<Mojo::URL> object;
-- key: 'ua'  value: a reference to the L<Mojox::UserAgent> object
-  to which this transaction belongs.
+=over 2
+
+=item *
+
+key: 'url' value: either a string or a L<Mojo::URL> object;
+
+=item *
+
+key: 'ua'  value: a reference to the L<Mojox::UserAgent> object
+to which this transaction belongs.
+
+=back
 
 It may also contain any/all of the following:
 
-- key: 'callback' value: the callback subroutine that will be
-  called when this transaction is finished;
-- key: 'headers' value: a reference to a hash of request headers
-  (see L<Mojo::Message::Request>);
-- key: 'method' value: the HTTP method to be used in the request;
-- key: 'body' value: the contents of the body of the request;
-- key: 'id' value: the value of the id attribute (see above);
-- key: 'hops' value: the value of the hops attribute (see above,
+=over 7
+
+=item *
+
+key: 'callback' value: the callback subroutine that will be
+called when this transaction is finished;
+
+=item *
+
+key: 'headers' value: a reference to a hash of request headers
+(see L<Mojo::Message::Request>);
+
+=item *
+
+key: 'method' value: the HTTP method to be used in the request;
+
+=item *
+
+key: 'body' value: the contents of the body of the request;
+
+=item *
+
+key: 'id' value: the value of the id attribute (see above);
+
+=item *
+
+key: 'hops' value: the value of the hops attribute (see above,
   should only be set by the User-Agent);
-- key: 'original_req' value: the original L<Mojo::Message::Request>
-  object iff hops isn't 0.
+
+=item *
+
+key: 'original_req' value: the original L<Mojo::Message::Request>
+object iff hops isn't 0.
+
+=back
 
 =head2 C<client_connect>
 
