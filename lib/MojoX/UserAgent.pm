@@ -1,3 +1,5 @@
+# Copyright (C) 2009, Pascal Gaudette.
+
 package MojoX::UserAgent;
 
 use warnings;
@@ -16,7 +18,7 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
-our $VERSION = '0.1';
+our $VERSION = '0.19';
 
 __PACKAGE__->attr('allow_post_redirect', 1);
 

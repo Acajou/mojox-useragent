@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+# Copyright (C) 2009, Pascal Gaudette.
+
 use strict;
 use warnings;
 

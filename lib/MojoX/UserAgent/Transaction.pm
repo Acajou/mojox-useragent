@@ -1,3 +1,5 @@
+# Copyright (C) 2009, Pascal Gaudette.
+
 package MojoX::UserAgent::Transaction;
 
 use warnings;
