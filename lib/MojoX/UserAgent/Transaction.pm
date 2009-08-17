@@ -141,7 +141,7 @@ The number of hops (ie redirects) that this transaction has gone through.
 =head2 C<id>
 
 An optional transaction identifier. Not used internally by the class,
-but passed back to the callback.
+but preserved across redirects and accessible to the callback.
 
 =head2 C<original_req>
 

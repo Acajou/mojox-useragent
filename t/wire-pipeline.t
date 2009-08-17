@@ -6,6 +6,8 @@ use warnings;
 use Test::More;
 use MojoX::UserAgent;
 
+plan skip_all => 'set TEST_NET to enable this test (must have Internet connectivity)'
+  unless $ENV{TEST_NET};
 plan tests => 94;
 
 my $ua = MojoX::UserAgent->new;
