@@ -654,32 +654,34 @@ L<MojoX::UserAgent> implements the following attributes.
 =head2 C<allow_post_redirect>
 
 Defaults to 1.  Controls whether to allow a POST to be redirected to a
-GET for another resource on a 301 or 302 response.  Default value immitates
-common browser behavior (and goes against the current HTTP/1.1 specification).
+GET for another resource on a 301 or 302 response.  Default value
+immitates common browser behavior (and goes against the current
+HTTP/1.1 specification).
 
 =head2 C<agent>
 
-Defaults to 'Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)'.  The User-Agent string
-that is used with every request that is made.
+Defaults to 'Mozilla/5.0 (compatible; MojoX::UserAgent/$VERSION)'.
+The User-Agent string that is used with every request that is made.
 
 =head2 C<app>
 
 Defaults to undef.  If set, L<MojoX::UserAgent> will send transactions
 to your application via Mojo's builtin facility for doing so.  This
-doesn't require any connectivity, and the application doesn't need to
-be started separately.  Great for testing.
+doesn't require any network connectivity, and the application doesn't
+need to be started separately.  Great for testing.
 
 =head2 C<cookie_jar>
 
-The place where session cookies are stored.  See L<MojoX::UserAgent::CookieJar>.
+The place where session cookies are stored.  See
+L<MojoX::UserAgent::CookieJar>.
 
 =head2 C<default_done_cb>
 
 Defaults to a not particularly useful sub. This is the sub that is
 used as a callback for every transaction for which a different
 callback is not provided.  Set it.  When invoked, this sub is passed
-two arguments: the UserAgent object that performed the transaction
-and the transaction itself.
+two arguments: the UserAgent object that performed the transaction and
+the transaction itself.
 
 =head2 C<default_headers>
 
@@ -696,7 +698,8 @@ Defaults to 1.  Whether or not to follow HTTP redirects.
 
 =head2 C<pipeline_method>
 
-Defaults to 'none'.  Other possible values are 'horizontal' and 'vertical'.
+Defaults to 'none'.  Other possible values are 'horizontal' and
+'vertical'.
 
 =head2 C<redirect_limit>
 
@@ -704,12 +707,13 @@ Defaults to 10.  Number of redirections to allow for any transaction.
 
 =head2 C<validate_cookie_paths>
 
-Defaults to 0.  When activated, cookie paths must be a prefix of the current request URL.
+Defaults to 0.  When activated, cookie paths must be a prefix of the
+current request URL.
 
 =head1 METHODS
 
-L<MojoX::UserAgent> inherits all methods from L<Mojo::Base> and implements the
-following new ones.
+L<MojoX::UserAgent> inherits all methods from L<Mojo::Base> and
+implements the following new ones.
 
 =head2 C<new>
 
@@ -757,7 +761,8 @@ facultative.  If not provided, the default_done_cb will be used.
 
     my $idle = $ua->is_idle;
 
-True if and only if the UserAgent currently has no outstanding transactions.
+True if and only if the UserAgent currently has no outstanding
+transactions.
 
 =head2 C<maxconnections>
 
