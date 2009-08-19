@@ -18,7 +18,7 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
-our $VERSION = '0.20';
+our $VERSION = '0.2001';
 
 __PACKAGE__->attr('allow_post_redirect', 1);
 
@@ -806,5 +806,13 @@ A blocking method that only returns when all spooled transactions
 Spool one or a series of L<MojoX::UserAgent::Transaction> objects.
 Please see the L<MojoX::UserAgent::Transaction> POD for information on
 how to instantiate such objects.
+
+=head1 AUTHOR
+
+Pascal Gaudette <acajou@gmail.com> - L<http://github.com/Acajou>
+
+=head1 LICENSE
+
+See LICENSE file.
 
 =cut

@@ -1,6 +1,6 @@
 MojoX::UserAgent
 
-An asynchronous HTTP user-agent implementation for the Mojo Web Framework
+An asynchronous HTTP user-agent implementation for the Mojo Web Framework.
 
 INSTALLATION
 
