@@ -41,7 +41,7 @@ sub new {
     if ($arg_ref->{headers}) {
         my $headers = $arg_ref->{headers};
         for my $name (keys %{$headers}) {
-            $req->headers->$name($headers->{$name});
+            $req->headers->header($name, $headers->{$name});
         }
     }
 
@@ -103,8 +103,8 @@ L<MojoX::UserAgent>, encapsulates a single HTTP exchange.
             ua      => $ua,
             id      => '123456',
             headers => {
-                expect       => '100-continue',
-                content_type => 'text/plain'
+                'Expect'       => '100-continue',
+                'Content-Type' => 'text/plain'
             },
             body     => 'Hello!',
             callback => sub {

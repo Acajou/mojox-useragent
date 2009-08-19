@@ -344,8 +344,8 @@ my $tx = MojoX::UserAgent::Transaction->new(
         ua      => $ua,
         id      => "a1a1a1",
         headers => {
-            expect       => '100-continue',
-            content_type => 'text/plain'
+            'Expect'       => '100-continue',
+            'Content-Type' => 'text/plain'
         },
         body     => 'Hello Mojo! 39827',
         callback => sub {
@@ -375,8 +375,8 @@ $tx = MojoX::UserAgent::Transaction->new(
         ua      => $ua,
         id      => "a2a2a2",
         headers => {
-            expect       => '100-continue',
-            content_type => 'text/plain'
+            'Expect'       => '100-continue',
+            'Content-Type' => 'text/plain'
         },
         body     => 'Hello Mojo! 39827',
         callback => sub {

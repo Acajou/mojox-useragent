@@ -360,7 +360,9 @@ sub _find_finished_pipe {
                 }
 
                 # We must also unpack from the other two queues...
-                while (my $inner = (shift @{$tx->inactive} || shift @{$tx->active})) {
+                while (my $inner =
+                    (shift @{$tx->inactive} || shift @{$tx->active}))
+                {
                     unless ($inner->has_error) {
                         $tx->has_error
                           ? $inner->error($tx->error)
@@ -615,8 +617,8 @@ MojoX::User-Agent - An asynchronous user-agent for the Mojo Web Framework.
             ua      => $ua,
             id      => '123456',
             headers => {
-                expect       => '100-continue',
-                content_type => 'text/plain'
+                'Expect'       => '100-continue',
+                'Content-Type' => 'text/plain'
             },
             body     => 'Hello!',
             callback => sub {
