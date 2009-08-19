@@ -3,3 +3,5 @@
 .*\.old$
 ^Makefile$
 ^\.git
+.*\.tmp$
+.*~$
