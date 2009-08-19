@@ -9,7 +9,7 @@ use base 'Mojo::Base';
 
 use Carp 'croak';
 
-use Mojo 0.991247;
+use Mojo 0.991250;
 
 use Mojo::URL;
 use Mojo::Transaction::Pipeline;
@@ -18,7 +18,7 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 __PACKAGE__->attr('allow_post_redirect', 1);
 
