@@ -18,7 +18,7 @@ use Mojo::Cookie;
 use MojoX::UserAgent::Transaction;
 use MojoX::UserAgent::CookieJar;
 
-our $VERSION = '0.2001';
+our $VERSION = '0.21';
 
 __PACKAGE__->attr('allow_post_redirect', 1);
 
