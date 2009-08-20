@@ -587,7 +587,7 @@ __END__
 
 =head1 NAME
 
-MojoX::User-Agent - An asynchronous user-agent for the Mojo Web Framework.
+MojoX::UserAgent - An asynchronous user-agent for the Mojo Web Framework.
 
 =head1 SYNOPSIS
 
